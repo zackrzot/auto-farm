@@ -34,6 +34,10 @@ double fan_control_signal_min = 0.0;
 double fan_control_signal_max = 255.0;
 double fan_relay_cutoff = 1.0;
 
+bool manual_water = false;
+bool manual_fan = false;
+double manual_fan_speed = 0.0;
+
 int print_count = 0;
 
 void setup() {
@@ -66,6 +70,34 @@ void loop() {
 
   // Get humidity
   humidity = am2302.get_Humidity();
+
+  // Handle serial commands
+  if (Serial.available() > 0) {
+    String command = Serial.readStringUntil('\n');
+    command.trim();
+    if (command == "W1") {
+      manual_water = true;
+      digitalWrite(valve_led_pin, HIGH); 
+      digitalWrite(valve_relay_pin, HIGH);
+    } else if (command == "W0") {
+      manual_water = false;
+      digitalWrite(valve_led_pin, LOW); 
+      digitalWrite(valve_relay_pin, LOW);
+    } else if (command.startsWith("F:")) {
+      manual_fan = true;
+      manual_fan_speed = command.substring(2).toDouble();
+      manual_fan_speed = constrain(manual_fan_speed, 0, 255);
+      analogWrite(fan_pwm_pin, manual_fan_speed);
+      if (manual_fan_speed <= fan_relay_cutoff) {
+        digitalWrite(fan_relay_pin, HIGH); 
+      } else {
+        digitalWrite(fan_relay_pin, LOW); 
+      }
+    } else if (command == "A") {
+      manual_fan = false;
+      manual_water = false;
+    }
+  }
 
   // Determine overtemp
   overtemp_f = temp_f - target_temp_f;
@@ -109,6 +141,9 @@ void loop() {
 
 
 void set_fan(){
+  if (manual_fan) {
+    return; // Manual control active
+  }
   double fan_pct = overtemp_f / 5;
   if(fan_pct>1.0){
     fan_pct = 1.0;
@@ -136,6 +171,9 @@ void set_fan(){
 
 
 void set_valve(){
+  if (manual_water) {
+    return; // Manual control active
+  }
 
   if(hydrometer_a < hydrometer_error){
     Serial.println("HYDROMETER A ERROR");

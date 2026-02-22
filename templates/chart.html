@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greenhouse Charts</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>Greenhouse Data Charts</h1>
+    <div>
+        <label for="start">Start Date:</label>
+        <input type="datetime-local" id="start">
+        <label for="end">End Date:</label>
+        <input type="datetime-local" id="end">
+        <button id="load">Load Data</button>
+    </div>
+    <canvas id="chart" width="400" height="200"></canvas>
+    <a href="/">Back to Monitor</a>
+    <script src="{{ url_for('static', filename='js/chart.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+#data {
+    margin-bottom: 20px;
+}
+
+#controls {
+    margin-bottom: 20px;
+}
+
+button {
+    margin: 5px;
+    padding: 10px;
+}

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greenhouse Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>Greenhouse Monitor</h1>
+    <div id="data">
+        <p>Temperature: <span id="temp">--</span> °F</p>
+        <p>Humidity: <span id="humidity">--</span> %</p>
+        <p>Soil Moisture A: <span id="hyd_a">--</span> %</p>
+        <p>Soil Moisture B: <span id="hyd_b">--</span> %</p>
+        <p>Fan Speed: <span id="fan">--</span></p>
+    </div>
+    <div id="controls">
+        <h2>Controls</h2>
+        <button id="water_on">Water On</button>
+        <button id="water_off">Water Off</button>
+        <button id="auto">Auto Mode</button>
+        <label for="fan_speed">Fan Speed (0-255):</label>
+        <input type="number" id="fan_speed" min="0" max="255">
+        <button id="set_fan">Set Fan</button>
+    </div>
+    <a href="/chart">View Charts</a>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

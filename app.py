@@ -90,6 +90,10 @@ def chart():
 def camera():
     return render_template('camera.html')
 
+@app.route('/triggers')
+def triggers():
+    return render_template('triggers.html')
+
 @app.route('/api/data')
 def get_data():
     latest = SensorData.query.order_by(SensorData.timestamp.desc()).first()
@@ -159,6 +163,63 @@ def get_db_info():
         })
     except Exception as e:
         return jsonify({'error': str(e)})
+
+@app.route('/api/triggers')
+def get_triggers():
+    latest = SensorData.query.order_by(SensorData.timestamp.desc()).first()
+    triggers = []
+    if latest:
+        temp = latest.temp_f
+        humidity = latest.humidity
+        hyd_a = latest.hydrometer_a
+        hyd_b = latest.hydrometer_b
+        fan = latest.fan_signal
+        
+        # Define triggers
+        triggers.append({
+            'name': 'Air Temp Cooldown',
+            'description': 'If temp > 90°F, fan speed scales to 100% from 90-95°F',
+            'active': temp > 90,
+            'details': f'Current temp: {temp}°F'
+        })
+        
+        triggers.append({
+            'name': 'High Humidity Control',
+            'description': 'If humidity > 80%, fan runs at 50% minimum',
+            'active': humidity > 80,
+            'details': f'Current humidity: {humidity}%'
+        })
+        
+        triggers.append({
+            'name': 'Soil Moisture Low (A)',
+            'description': 'If soil moisture A < 30%, activate water pump',
+            'active': hyd_a < 30,
+            'details': f'Current soil moisture A: {hyd_a}%'
+        })
+        
+        triggers.append({
+            'name': 'Soil Moisture Low (B)',
+            'description': 'If soil moisture B < 30%, activate water pump',
+            'active': hyd_b < 30,
+            'details': f'Current soil moisture B: {hyd_b}%'
+        })
+        
+        triggers.append({
+            'name': 'Critical Temperature Alert',
+            'description': 'If temp > 95°F, sound alarm and max fan',
+            'active': temp > 95,
+            'details': f'Current temp: {temp}°F'
+        })
+        
+        triggers.append({
+            'name': 'Fan Status Monitor',
+            'description': 'Fan is running if signal > 0',
+            'active': fan > 0,
+            'details': f'Current fan signal: {fan}'
+        })
+        
+        # Add more triggers here as needed
+    return jsonify(triggers)
 
 if __name__ == '__main__':
     with app.app_context():

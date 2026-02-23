@@ -59,6 +59,9 @@ function initChart() {
             },
             scales: {
                 y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
                     beginAtZero: false,
                     ticks: {
                         font: { size: 11 }
@@ -212,7 +215,11 @@ async function loadDayData(year, month, day) {
         
         const data = await response.json();
         
-        if (!Array.isArray(data) || data.length === 0) {
+        // Handle both old and new API response formats
+        const sensorData = data.sensor_data || data;
+        const triggerLogs = data.trigger_logs || {};
+        
+        if (!Array.isArray(sensorData) || sensorData.length === 0) {
             document.getElementById('noDataMessage').style.display = 'block';
             if (chart) {
                 chart.data.labels = [];
@@ -224,9 +231,15 @@ async function loadDayData(year, month, day) {
         
         document.getElementById('noDataMessage').style.display = 'none';
         
+        // Get unique trigger names from the logs
+        const triggerNames = new Set();
+        Object.values(triggerLogs).forEach(timestampTriggers => {
+            Object.keys(timestampTriggers).forEach(name => triggerNames.add(name));
+        });
+        
         // Update chart with selected day's data
         if (chart) {
-            chart.data.labels = data.map(d => {
+            chart.data.labels = sensorData.map(d => {
                 const time = new Date(d.timestamp).toLocaleTimeString('en-US', { 
                     hour: '2-digit', 
                     minute: '2-digit',
@@ -234,10 +247,75 @@ async function loadDayData(year, month, day) {
                 });
                 return time;
             });
-            chart.data.datasets[0].data = data.map(d => d.temp_f);
-            chart.data.datasets[1].data = data.map(d => d.humidity);
-            chart.data.datasets[2].data = data.map(d => d.hydrometer_a);
-            chart.data.datasets[3].data = data.map(d => d.hydrometer_b);
+            
+            // Update sensor datasets
+            chart.data.datasets[0].data = sensorData.map(d => d.temp_f);
+            chart.data.datasets[1].data = sensorData.map(d => d.humidity);
+            chart.data.datasets[2].data = sensorData.map(d => d.hydrometer_a);
+            chart.data.datasets[3].data = sensorData.map(d => d.hydrometer_b);
+            
+            // Update or add trigger datasets
+            const colors = ['#dc3545', '#28a745', '#ffc107', '#0d6efd', '#6f42c1', '#20c997'];
+            let triggerIndex = 0;
+            const triggerColors = {};
+            
+            triggerNames.forEach(triggerName => {
+                triggerColors[triggerName] = colors[triggerIndex % colors.length];
+                triggerIndex++;
+            });
+            
+            // Remove old trigger datasets (keep only the 4 sensor datasets)
+            while (chart.data.datasets.length > 4) {
+                chart.data.datasets.pop();
+            }
+            
+            // Add trigger datasets
+            Array.from(triggerNames).forEach((triggerName, idx) => {
+                const triggerColor = triggerColors[triggerName];
+                const triggerData = sensorData.map(d => {
+                    const logEntry = triggerLogs[d.timestamp];
+                    if (logEntry && triggerName in logEntry) {
+                        return logEntry[triggerName] ? 100 : 0;
+                    }
+                    return null;
+                });
+                
+                // Only add dataset if there's data
+                if (triggerData.some(v => v !== null)) {
+                    chart.data.datasets.push({
+                        label: `Trigger: ${triggerName}`,
+                        data: triggerData,
+                        borderColor: triggerColor,
+                        backgroundColor: triggerColor + '20',
+                        borderWidth: 1,
+                        fill: true,
+                        stepped: true,
+                        tension: 0,
+                        pointRadius: 0,
+                        yAxisID: 'y1'
+                    });
+                }
+            });
+            
+            // Update chart scales if trigger data exists
+            if (triggerNames.size > 0) {
+                chart.options.scales.y1 = {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    min: 0,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value === 100 ? 'Active' : 'Inactive';
+                        }
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                };
+            }
+            
             chart.update();
         }
     } catch (error) {

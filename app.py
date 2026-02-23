@@ -5,7 +5,7 @@ import threading
 import time
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
-from models import db, SensorData
+from models import db, SensorData, TriggerLog
 import json
 import argparse
 import os
@@ -142,7 +142,20 @@ def get_history():
             
             start_dt = datetime.fromisoformat(start)
             end_dt = datetime.fromisoformat(end)
-            data = SensorData.query.filter(SensorData.timestamp >= start_dt, SensorData.timestamp <= end_dt).all()
+            
+            # Get sensor data
+            sensor_data = SensorData.query.filter(
+                SensorData.timestamp >= start_dt, 
+                SensorData.timestamp <= end_dt
+            ).all()
+            
+            # Get trigger logs for the same period
+            trigger_logs = TriggerLog.query.filter(
+                TriggerLog.timestamp >= start_dt,
+                TriggerLog.timestamp <= end_dt
+            ).all()
+            
+            # Build result with sensor data
             result = [{
                 'timestamp': d.timestamp.isoformat(),
                 'temp_f': d.temp_f,
@@ -150,12 +163,24 @@ def get_history():
                 'hydrometer_a': d.hydrometer_a,
                 'hydrometer_b': d.hydrometer_b,
                 'humidity': d.humidity
-            } for d in data]
-            return jsonify(result)
+            } for d in sensor_data]
+            
+            # Build trigger log summary (by trigger name and timestamp)
+            trigger_summary = {}
+            for log in trigger_logs:
+                key = log.timestamp.isoformat()
+                if key not in trigger_summary:
+                    trigger_summary[key] = {}
+                trigger_summary[key][log.trigger_name] = log.active
+            
+            return jsonify({
+                'sensor_data': result,
+                'trigger_logs': trigger_summary
+            })
         except Exception as e:
             print(f"Error in get_history: {e}")
             return jsonify({'error': str(e)}), 400
-    return jsonify([])
+    return jsonify({'sensor_data': [], 'trigger_logs': {}})
 
 @app.route('/api/available-dates')
 def get_available_dates():
@@ -199,10 +224,11 @@ def get_db_info():
     except Exception as e:
         return jsonify({'error': str(e)})
 
-@app.route('/api/triggers')
-def get_triggers():
+def calculate_and_log_triggers():
+    """Calculate triggers from latest sensor data and log them to database"""
     latest = SensorData.query.order_by(SensorData.timestamp.desc()).first()
     triggers = []
+    
     if latest:
         temp = latest.temp_f
         humidity = latest.humidity
@@ -253,8 +279,28 @@ def get_triggers():
             'details': f'Current fan signal: {fan}'
         })
         
-        # Add more triggers here as needed
-    return jsonify(triggers)
+        # Log each trigger state to database
+        timestamp = latest.timestamp
+        for trigger in triggers:
+            log_entry = TriggerLog(
+                timestamp=timestamp,
+                trigger_name=trigger['name'],
+                active=trigger['active']
+            )
+            db.session.add(log_entry)
+        
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error logging triggers: {e}")
+    
+    return triggers
+
+@app.route('/api/triggers')
+def get_triggers():
+    """Get current trigger states (calculated from latest sensor data)"""
+    return jsonify(calculate_and_log_triggers())
 
 if __name__ == '__main__':
     with app.app_context():

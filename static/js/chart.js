@@ -1,90 +1,161 @@
-document.addEventListener('DOMContentLoaded', function() {
+let liveChart = null;
+let chartData = {
+    labels: [],
+    temps: [],
+    humidities: [],
+    fans: []
+};
+
+function initChart() {
     const chartEl = document.getElementById('chart');
-    if (!chartEl) return;
-    
+    if (!chartEl) {
+        console.log('Chart element not found');
+        return;
+    }
+
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js not loaded yet');
+        setTimeout(initChart, 500);
+        return;
+    }
+
     const ctx = chartEl.getContext('2d');
-    let chart = new Chart(ctx, {
+    
+    liveChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: [],
+            labels: chartData.labels,
             datasets: [
                 {
                     label: 'Temperature (°F)',
-                    data: [],
-                    borderColor: '#dc3545',
-                    backgroundColor: 'rgba(220, 53, 69, 0.05)',
-                    tension: 0.1,
-                    fill: false
+                    data: chartData.temps,
+                    borderColor: 'rgb(220, 53, 69)',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 5
                 },
                 {
                     label: 'Humidity (%)',
-                    data: [],
-                    borderColor: '#0d6efd',
-                    backgroundColor: 'rgba(13, 110, 253, 0.05)',
-                    tension: 0.1,
-                    fill: false
+                    data: chartData.humidities,
+                    borderColor: 'rgb(13, 110, 253)',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 5
                 },
                 {
                     label: 'Fan Speed',
-                    data: [],
-                    borderColor: '#6f42c1',
-                    backgroundColor: 'rgba(111, 66, 193, 0.05)',
-                    tension: 0.1,
-                    fill: false
+                    data: chartData.fans,
+                    borderColor: 'rgb(111, 66, 193)',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 5
                 }
             ]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,
+            animation: false,
             plugins: {
                 legend: {
                     display: true,
-                    position: 'top'
+                    position: 'top',
+                    labels: {
+                        padding: 15,
+                        font: { size: 12 },
+                        usePointStyle: true
+                    }
                 }
             },
             scales: {
                 y: {
                     beginAtZero: false,
                     ticks: {
-                        font: { size: 11 }
+                        callback: function(value) {
+                            return value.toFixed(0);
+                        }
                     }
                 },
                 x: {
                     display: true,
                     ticks: {
-                        font: { size: 11 }
+                        maxRotation: 45,
+                        minRotation: 0
                     }
                 }
             }
         }
     });
 
-    let pointCount = 0;
+    console.log('Chart initialized successfully');
+}
+
+function updateLiveChart(data) {
+    if (!liveChart) return;
+
+    const time = new Date(data.timestamp).toLocaleTimeString();
     
-    function updateChart(d) {
-        const time = new Date(d.timestamp).toLocaleTimeString();
-        chart.data.labels.push(time);
-        chart.data.datasets[0].data.push(d.temp_f);
-        chart.data.datasets[1].data.push(d.humidity);
-        chart.data.datasets[2].data.push(d.fan_signal);
-        
-        pointCount++;
-        if (pointCount > 60) {
-            chart.data.labels.shift();
-            chart.data.datasets[0].data.shift();
-            chart.data.datasets[1].data.shift();
-            chart.data.datasets[2].data.shift();
-        }
-        chart.update('none');
+    chartData.labels.push(time);
+    chartData.temps.push(parseFloat(data.temp_f) || 0);
+    chartData.humidities.push(parseFloat(data.humidity) || 0);
+    chartData.fans.push(parseFloat(data.fan_signal) || 0);
+
+    // Keep only last 60 points
+    const maxPoints = 60;
+    if (chartData.labels.length > maxPoints) {
+        chartData.labels.shift();
+        chartData.temps.shift();
+        chartData.humidities.shift();
+        chartData.fans.shift();
     }
 
-    setInterval(() => {
-        fetch('/api/data')
-            .then(r => r.json())
-            .then(d => {
-                if (d && d.timestamp) updateChart(d);
-            })
-            .catch(err => console.log('Data fetch error:', err));
-    }, 1000);
-});
+    liveChart.data.labels = chartData.labels;
+    liveChart.data.datasets[0].data = chartData.temps;
+    liveChart.data.datasets[1].data = chartData.humidities;
+    liveChart.data.datasets[2].data = chartData.fans;
+    
+    liveChart.update('none');
+}
+
+function fetchLiveData() {
+    fetch('/api/data')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('API error: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data && data.timestamp) {
+                updateLiveChart(data);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+        });
+}
+
+// Wait for DOM to be ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded, initializing chart');
+        initChart();
+        
+        // Start polling for data
+        setInterval(fetchLiveData, 1000);
+        
+        // Fetch immediately on load
+        fetchLiveData();
+    });
+} else {
+    console.log('DOM already loaded, initializing chart immediately');
+    initChart();
+    setInterval(fetchLiveData, 1000);
+    fetchLiveData();
+}

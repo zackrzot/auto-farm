@@ -8,6 +8,13 @@
 </head>
 <body>
     <h1>Greenhouse Monitor</h1>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+    <div id="live-chart">
+        <h2>Live Data</h2>
+        <canvas id="chart" width="600" height="250"></canvas>
+    </div>
     <div id="data">
         <p>Temperature: <span id="temp">--</span> °F</p>
         <p>Humidity: <span id="humidity">--</span> %</p>

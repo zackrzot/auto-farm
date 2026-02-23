@@ -1,11 +1,14 @@
 from flask import Flask, render_template, request, jsonify
 import serial
+from serial import SerialException
 import threading
 import time
 from datetime import datetime
 from models import db, SensorData
 import json
 import argparse
+import os
+import atexit
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
@@ -13,7 +16,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 # Serial setup
-SERIAL_PORT = 'COM3'  # Default, can be overridden with --port argument
+SERIAL_PORT = 'COM5'  # Default, can be overridden with --port argument
 BAUD_RATE = 9600
 
 # Parse command line arguments
@@ -30,9 +33,26 @@ def init_serial():
     global ser
     try:
         ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
-        print(f"Connected to {SERIAL_PORT}")
+        print(f"✓ Connected to {SERIAL_PORT} at {BAUD_RATE} baud")
+        atexit.register(close_serial)
+    except PermissionError as e:
+        print(f"\n❌ PERMISSION DENIED on {SERIAL_PORT}")
+        print(f"   Possible causes:")
+        print(f"   1. Another application is using this port (close Arduino IDE, etc.)")
+        print(f"   2. Port is locked - try unplugging USB and plugging back in")
+        print(f"   3. Need to run as Administrator")
+        print(f"   Run this to check ports: python serial_diagnostic.py {SERIAL_PORT}\n")
+    except serial.SerialException as e:
+        print(f"❌ Serial Error: {e}")
+        print(f"   Run this to see available ports: python find_arduino.py")
     except Exception as e:
-        print(f"Failed to connect to serial: {e}")
+        print(f"❌ Failed to connect to {SERIAL_PORT}: {type(e).__name__}: {e}")
+
+def close_serial():
+    global ser
+    if ser and ser.is_open:
+        ser.close()
+        print("Serial connection closed.")
 
 def read_serial():
     global ser
@@ -51,8 +71,9 @@ def read_serial():
                         timestamp = datetime.now()
                         data = SensorData(timestamp=timestamp, temp_f=temp_f, fan_signal=fan_signal,
                                         hydrometer_a=hydrometer_a, hydrometer_b=hydrometer_b, humidity=humidity)
-                        db.session.add(data)
-                        db.session.commit()
+                        with app.app_context():
+                            db.session.add(data)
+                            db.session.commit()
             except Exception as e:
                 print(f"Error reading serial: {e}")
         time.sleep(0.1)
@@ -122,6 +143,7 @@ def get_history():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    init_serial()
-    threading.Thread(target=read_serial, daemon=True).start()
-    app.run(debug=True)
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        init_serial()
+        threading.Thread(target=read_serial, daemon=True).start()
+    app.run(debug=True, host='0.0.0.0')

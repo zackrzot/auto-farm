@@ -158,7 +158,9 @@ auto-farm/
 
 ### Serial Connection Failed
 - Check Arduino is connected via USB
-- Verify correct COM port in `app.py`
+- Verify correct COM port: `python find_arduino.py`
+- Run diagnostics: `python serial_diagnostic.py`
+- For "Access Denied" errors: See [SERIAL_TROUBLESHOOTING.md](SERIAL_TROUBLESHOOTING.md)
 - Upload the sketch to Arduino from Arduino IDE
 
 ### No Data Appearing

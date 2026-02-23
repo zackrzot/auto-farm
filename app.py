@@ -3,7 +3,8 @@ import serial
 from serial import SerialException
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, date
+from dateutil.relativedelta import relativedelta
 from models import db, SensorData
 import json
 import argparse
@@ -134,19 +135,53 @@ def get_history():
     start = request.args.get('start')
     end = request.args.get('end')
     if start and end:
-        start_dt = datetime.fromisoformat(start)
-        end_dt = datetime.fromisoformat(end)
-        data = SensorData.query.filter(SensorData.timestamp >= start_dt, SensorData.timestamp <= end_dt).all()
-        result = [{
-            'timestamp': d.timestamp.isoformat(),
-            'temp_f': d.temp_f,
-            'fan_signal': d.fan_signal,
-            'hydrometer_a': d.hydrometer_a,
-            'hydrometer_b': d.hydrometer_b,
-            'humidity': d.humidity
-        } for d in data]
-        return jsonify(result)
+        try:
+            # Remove 'Z' suffix if present (from JavaScript ISO format)
+            start = start.rstrip('Z') if start.endswith('Z') else start
+            end = end.rstrip('Z') if end.endswith('Z') else end
+            
+            start_dt = datetime.fromisoformat(start)
+            end_dt = datetime.fromisoformat(end)
+            data = SensorData.query.filter(SensorData.timestamp >= start_dt, SensorData.timestamp <= end_dt).all()
+            result = [{
+                'timestamp': d.timestamp.isoformat(),
+                'temp_f': d.temp_f,
+                'fan_signal': d.fan_signal,
+                'hydrometer_a': d.hydrometer_a,
+                'hydrometer_b': d.hydrometer_b,
+                'humidity': d.humidity
+            } for d in data]
+            return jsonify(result)
+        except Exception as e:
+            print(f"Error in get_history: {e}")
+            return jsonify({'error': str(e)}), 400
     return jsonify([])
+
+@app.route('/api/available-dates')
+def get_available_dates():
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+    
+    if not year or not month:
+        return jsonify({'error': 'year and month required'}), 400
+    
+    # Get first and last day of the month
+    month_start = datetime(year, month, 1)
+    month_end = month_start + relativedelta(months=1) - relativedelta(days=1)
+    month_end = month_end.replace(hour=23, minute=59, second=59)
+    
+    # Get all dates with data for this month
+    data = SensorData.query.filter(
+        SensorData.timestamp >= month_start,
+        SensorData.timestamp <= month_end
+    ).all()
+    
+    # Extract unique dates
+    dates_with_data = set()
+    for record in data:
+        dates_with_data.add(record.timestamp.date().day)
+    
+    return jsonify({'dates': sorted(list(dates_with_data))})
 
 @app.route('/api/db_info')
 def get_db_info():

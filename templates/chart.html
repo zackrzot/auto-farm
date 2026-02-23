@@ -8,6 +8,133 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .calendar-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .calendar-header h5 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .calendar-nav-btn {
+            background: #0d6efd;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .calendar-nav-btn:hover {
+            background: #0b5ed7;
+        }
+
+        .weekday-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .weekday-label {
+            text-align: center;
+            font-weight: 600;
+            font-size: 12px;
+            color: #666;
+            padding: 8px 0;
+        }
+
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+
+        .day-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            color: #999;
+        }
+
+        .day-cell.other-month {
+            color: #ddd;
+            background: #fafafa;
+        }
+
+        .day-cell.has-data {
+            background: #e7f3ff;
+            border-color: #0d6efd;
+            color: #0d6efd;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .day-cell.has-data:hover {
+            background: #cfe2ff;
+            border-color: #0b5ed7;
+        }
+
+        .day-cell.selected {
+            background: #0d6efd;
+            color: white;
+            border-color: #0d6efd;
+            font-weight: 600;
+        }
+
+        .day-cell.selected:hover {
+            background: #0b5ed7;
+            border-color: #0b5ed7;
+        }
+
+        .day-cell.today {
+            border: 2px solid #28a745;
+        }
+
+        .selected-day-info {
+            text-align: center;
+            margin-top: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+
+        .selected-day-info p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .selected-day-info .date-display {
+            font-size: 16px;
+            font-weight: 600;
+            color: #0d6efd;
+            margin: 5px 0;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
@@ -29,29 +156,44 @@
     <div class="container py-4">
         <h1 class="mb-4">Past Data Viewer</h1>
         <div class="row">
-            <div class="col-12">
+            <div class="col-lg-3">
                 <div class="card mb-3">
                     <div class="card-body">
-                        <h5 class="card-title">Load Historical Data</h5>
-                        <div class="row g-2">
-                            <div class="col-auto">
-                                <label for="start" class="form-label">Start Date:</label>
-                                <input type="datetime-local" id="start" class="form-control">
+                        <h5 class="card-title">Select Date</h5>
+                        <div class="calendar-container">
+                            <div class="calendar-header">
+                                <button class="calendar-nav-btn" id="prevMonth">← Prev</button>
+                                <h5 id="monthYear"></h5>
+                                <button class="calendar-nav-btn" id="nextMonth">Next →</button>
                             </div>
-                            <div class="col-auto">
-                                <label for="end" class="form-label">End Date:</label>
-                                <input type="datetime-local" id="end" class="form-control">
+                            
+                            <div class="weekday-header">
+                                <div class="weekday-label">Sun</div>
+                                <div class="weekday-label">Mon</div>
+                                <div class="weekday-label">Tue</div>
+                                <div class="weekday-label">Wed</div>
+                                <div class="weekday-label">Thu</div>
+                                <div class="weekday-label">Fri</div>
+                                <div class="weekday-label">Sat</div>
                             </div>
-                            <div class="col-auto align-self-end">
-                                <button id="load" class="btn btn-primary">Load Data</button>
-                            </div>
+
+                            <div class="calendar-days" id="calendar"></div>
+                        </div>
+
+                        <div class="selected-day-info" id="selectedDayInfo">
+                            <p>No day selected</p>
                         </div>
                     </div>
                 </div>
+            </div>
 
+            <div class="col-lg-9">
                 <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">Chart</h5>
+                        <div id="noDataMessage" class="alert alert-info" style="display: none;">
+                            Select a day from the calendar to view data.
+                        </div>
                         <div style="position: relative; width: 100%; height: 400px;">
                             <canvas id="chart"></canvas>
                         </div>

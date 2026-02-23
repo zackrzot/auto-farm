@@ -1,23 +1,23 @@
-# 📚 Documentation Entry Points & Navigation Guide
+# Documentation Entry Points & Navigation Guide
 
-Welcome to the Greenhouse Monitor & Control System! You'll find everything you need below.
+Welcome to auto-farm! You'll find everything you need below.
 
 ---
 
-## 🎯 Start Here (Choose Your Path)
+## Start Here (Choose Your Path)
 
-### 👤 "I just want to get it running"
+### "I just want to get it running"
 → Read: **[QUICKSTART.md](QUICKSTART.md)** (5 minutes)
 - 5 simple steps to get the app running
 - From installation to open browser
 
-### 📊 "Show me what was built"
+### "Show me what was built"
 → Read: **[COMPLETION_SUMMARY.md](COMPLETION_SUMMARY.md)** (10 minutes)
 - Overview of all features
 - File descriptions
 - Feature checklist
 
-### 🏗️ "How does this system work?"
+### "How does this system work?"
 → Read: **[ARCHITECTURE.md](ARCHITECTURE.md)** (15 minutes)
 - System diagram
 - Data flow explanation
@@ -25,7 +25,7 @@ Welcome to the Greenhouse Monitor & Control System! You'll find everything you n
 - Serial protocol
 - Control logic
 
-### 📖 "Give me everything"
+### "Give me everything"
 → Read: **[README.md](README.md)** (20 minutes)
 - Comprehensive documentation
 - All features explained
@@ -34,7 +34,7 @@ Welcome to the Greenhouse Monitor & Control System! You'll find everything you n
 - Database schema
 - Troubleshooting
 
-### 🗺️ "I need to navigate this project"
+### "I need to navigate this project"
 → Read: **[INDEX.md](INDEX.md)** (Quick reference)
 - File structure overview
 - Feature list
@@ -42,14 +42,14 @@ Welcome to the Greenhouse Monitor & Control System! You'll find everything you n
 - API examples
 - Learning path
 
-### 📋 "Did you implement everything I asked for?"
+### "Did you implement everything I asked for?"
 → Read: **[CHECKLIST.md](CHECKLIST.md)** (Verification)
 - Feature checklist
 - File inventory
 - Implementation verification
 - Quality assurance
 
-### 🎨 "Show me a visual overview"
+### "Show me a visual overview"
 → Read: **[VISUAL_GUIDE.txt](VISUAL_GUIDE.txt)** (ASCII art)
 - System overview with ASCII diagrams
 - Quick reference
@@ -58,7 +58,7 @@ Welcome to the Greenhouse Monitor & Control System! You'll find everything you n
 
 ---
 
-## 📂 Documentation by Category
+## Documentation by Category
 
 ### Getting Started
 | File | Time | Purpose |
@@ -86,7 +86,7 @@ Welcome to the Greenhouse Monitor & Control System! You'll find everything you n
 
 ---
 
-## 🔍 Finding Specific Information
+## Finding Specific Information
 
 ### Want to know about...
 
@@ -141,25 +141,25 @@ Welcome to the Greenhouse Monitor & Control System! You'll find everything you n
 
 ---
 
-## 📑 Quick Reference Tables
+## Quick Reference Tables
 
 ### Files You Need to Read
 ```
 Must Read:
-  ✓ QUICKSTART.md        (to get started)
-  ✓ README.md            (full documentation)
+  - QUICKSTART.md        (to get started)
+  - README.md            (full documentation)
 
 Should Read:
-  ✓ ARCHITECTURE.md      (how it works)
-  ✓ INDEX.md             (navigation)
+  - ARCHITECTURE.md      (how it works)
+  - INDEX.md             (navigation)
 
 Nice to Have:
-  ✓ COMPLETION_SUMMARY.md (overview)
-  ✓ CHECKLIST.md         (verification)
-  ✓ VISUAL_GUIDE.txt     (diagrams)
+  - COMPLETION_SUMMARY.md (overview)
+  - CHECKLIST.md         (verification)
+  - VISUAL_GUIDE.txt     (diagrams)
 
 Reference:
-  ✓ api_example.py       (code examples)
+  - api_example.py       (code examples)
 ```
 
 ### Reading Time Estimate
@@ -177,7 +177,7 @@ Reference:
 
 ---
 
-## 🎓 Suggested Reading Order
+## Suggested Reading Order
 
 ### For Users (Just want to use it)
 1. [VISUAL_GUIDE.txt](VISUAL_GUIDE.txt) - Understand what it is
@@ -207,7 +207,7 @@ Reference:
 
 ---
 
-## 🔗 Cross-References
+## Cross-References
 
 ### Getting Started
 - [QUICKSTART.md](QUICKSTART.md) - Links to:
@@ -237,25 +237,25 @@ Reference:
 
 ---
 
-## 📞 Documentation Features
+## Documentation Features
 
 ### Each Document Includes:
-✓ Clear section headings
-✓ Table of contents (where applicable)
-✓ Code examples
-✓ Diagrams and flowcharts
-✓ Cross-references
-✓ Quick reference tables
-✓ Troubleshooting guides
-✓ Next steps
+- Clear section headings
+- Table of contents (where applicable)
+- Code examples
+- Diagrams and flowcharts
+- Cross-references
+- Quick reference tables
+- Troubleshooting guides
+- Next steps
 
 ### Code Examples Included:
-✓ Installation commands
-✓ Configuration examples
-✓ API call examples
-✓ Database queries
-✓ Arduino sketch excerpts
-✓ HTML/JavaScript samples
+- Installation commands
+- Configuration examples
+- API call examples
+- Database queries
+- Arduino sketch excerpts
+- HTML/JavaScript samples
 
 ---
 

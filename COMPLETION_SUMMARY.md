@@ -1,9 +1,9 @@
 # Project Completion Summary
 
-## ✓ Greenhouse Monitor & Control System - Complete Implementation
+## auto-farm - Complete Implementation
 
 ### Overview
-A full-stack greenhouse monitoring and control application with:
+A full-stack automated greenhouse control application with:
 - **Python 3.10 Flask backend** with SQLAlchemy ORM
 - **Arduino serial communication** for real-time sensor data and device control
 - **Real-time web dashboard** showing current environmental conditions

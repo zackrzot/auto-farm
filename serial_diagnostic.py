@@ -16,7 +16,7 @@ def check_ports():
     ports = serial.tools.list_ports.comports()
     
     if not ports:
-        print("❌ No COM ports found!")
+        print("No COM ports found!")
         return False
     
     for idx, port in enumerate(ports, 1):
@@ -28,14 +28,14 @@ def check_ports():
         print(f"   Access test: ", end="")
         try:
             ser = serial.Serial(port.device, 9600, timeout=1)
-            print("✓ OK (accessible)")
+            print("OK (accessible)")
             ser.close()
         except PermissionError:
-            print("❌ PERMISSION DENIED")
+            print("PERMISSION DENIED")
         except SerialException as e:
-            print(f"❌ ERROR: {e}")
+            print(f"ERROR: {e}")
         except Exception as e:
-            print(f"❌ {type(e).__name__}: {e}")
+            print(f"{type(e).__name__}: {e}")
     
     return True
 
@@ -47,13 +47,13 @@ def test_specific_port(port_name):
     try:
         print("Attempting to open port... ", end="")
         ser = serial.Serial(port_name, 9600, timeout=1)
-        print("✓ SUCCESS")
+        print("SUCCESS")
         print(f"Port is open: {ser.is_open}")
         ser.close()
         print("Port closed successfully")
         return True
     except PermissionError as e:
-        print(f"❌ PERMISSION ERROR: {e}")
+        print(f"PERMISSION ERROR: {e}")
         print("\nSolutions:")
         print("1. Close other applications using this port (Arduino IDE, etc.)")
         print("2. Run Command Prompt as Administrator")
@@ -61,14 +61,14 @@ def test_specific_port(port_name):
         print("4. Check Device Manager for driver issues")
         return False
     except serial.SerialException as e:
-        print(f"❌ SERIAL ERROR: {e}")
+        print(f"SERIAL ERROR: {e}")
         return False
     except Exception as e:
-        print(f"❌ ERROR: {type(e).__name__}: {e}")
+        print(f"ERROR: {type(e).__name__}: {e}")
         return False
 
 if __name__ == '__main__':
-    print("\n🔧 Serial Port Diagnostic Tool\n")
+    print("\nSerial Port Diagnostic Tool\n")
     
     # Always show available ports
     check_ports()

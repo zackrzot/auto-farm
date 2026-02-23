@@ -29,7 +29,7 @@ This will tell you if that specific port can be opened.
 
 ## Common Solutions (Try These First)
 
-### ✓ Solution 1: Close Other Applications
+### Solution 1: Close Other Applications
 
 **The most common cause:** Another application has the port open.
 
@@ -45,7 +45,7 @@ Common culprits:
 2. Close any serial monitor applications
 3. Try again: `python app.py --port COM5`
 
-### ✓ Solution 2: Unplug and Replug USB
+### Solution 2: Unplug and Replug USB
 
 Sometimes the port gets locked by Windows.
 
@@ -56,7 +56,7 @@ Sometimes the port gets locked by Windows.
 4. Plug back in
 5. Try again: `python app.py --port COM5`
 
-### ✓ Solution 3: Run as Administrator
+### Solution 3: Run as Administrator
 
 Some COM ports require elevated privileges.
 
@@ -71,7 +71,7 @@ Some COM ports require elevated privileges.
 2. Right-click "Windows PowerShell" → "Run as administrator"
 3. Navigate and run same command
 
-### ✓ Solution 4: Check Device Manager
+### Solution 4: Check Device Manager
 
 Verify the Arduino is detected correctly.
 
@@ -84,7 +84,7 @@ Verify the Arduino is detected correctly.
 
 If you see a yellow exclamation mark: **Driver issue** (see below)
 
-### ✓ Solution 5: Reset COM Port
+### Solution 5: Reset COM Port
 
 Sometimes the port gets stuck. Reset it:
 
@@ -206,9 +206,9 @@ def init_serial():
     print(f"Debug: Available ports: {[p.device for p in serial.tools.list_ports.comports()]}")
     try:
         ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
-        print(f"✓ Connected to {SERIAL_PORT}")
-    except PermissionError:
-        print(f"❌ PERMISSION DENIED")
+      print(f"Connected to {SERIAL_PORT}")
+      except PermissionError:
+         print(f"PERMISSION DENIED")
         # ... rest of error handling
 ```
 
@@ -238,7 +238,7 @@ def init_serial():
 2. **Port is accessible:**
    ```bash
    python serial_diagnostic.py COM5
-   # Should show: "✓ OK (accessible)"
+   # Should show: "OK (accessible)"
    ```
 
 3. **Arduino sketch is uploaded:**
@@ -250,7 +250,7 @@ def init_serial():
 4. **Try the app:**
    ```bash
    python app.py --port COM5
-   # Should show: "✓ Connected to COM5 at 9600 baud"
+   # Should show: "Connected to COM5 at 9600 baud"
    ```
 
 ---
@@ -276,7 +276,7 @@ python serial_diagnostic.py COM5
 python app.py --port COM5
 ```
 
-If all diagnostics show "✓ OK" but the app still fails, the issue might be:
+If all diagnostics show "OK" but the app still fails, the issue might be:
 - Flask initialization problem (not serial)
 - Database issue
 - Python environment issue

@@ -25,10 +25,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     fill: false
                 },
                 {
-                    label: 'Fan Speed',
+                    label: 'Soil Moisture A (%)',
                     data: [],
-                    borderColor: '#6f42c1',
-                    backgroundColor: 'rgba(111, 66, 193, 0.05)',
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.05)',
+                    tension: 0.1,
+                    fill: false
+                },
+                {
+                    label: 'Soil Moisture B (%)',
+                    data: [],
+                    borderColor: '#ffc107',
+                    backgroundColor: 'rgba(255, 193, 7, 0.05)',
                     tension: 0.1,
                     fill: false
                 }
@@ -36,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     display: true,
@@ -60,31 +68,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    let pointCount = 0;
-    
-    function updateChart(d) {
-        const time = new Date(d.timestamp).toLocaleTimeString();
-        chart.data.labels.push(time);
-        chart.data.datasets[0].data.push(d.temp_f);
-        chart.data.datasets[1].data.push(d.humidity);
-        chart.data.datasets[2].data.push(d.fan_signal);
+    document.getElementById('load').addEventListener('click', function() {
+        const start = document.getElementById('start').value;
+        const end = document.getElementById('end').value;
         
-        pointCount++;
-        if (pointCount > 60) {
-            chart.data.labels.shift();
-            chart.data.datasets[0].data.shift();
-            chart.data.datasets[1].data.shift();
-            chart.data.datasets[2].data.shift();
+        if (!start || !end) {
+            alert('Please select both start and end dates');
+            return;
         }
-        chart.update('none');
-    }
-
-    setInterval(() => {
-        fetch('/api/data')
+        
+        fetch(`/api/history?start=${start}&end=${end}`)
             .then(r => r.json())
-            .then(d => {
-                if (d && d.timestamp) updateChart(d);
+            .then(data => {
+                if (!Array.isArray(data) || data.length === 0) {
+                    alert('No data found for the selected date range');
+                    return;
+                }
+                
+                chart.data.labels = data.map(d => new Date(d.timestamp).toLocaleString());
+                chart.data.datasets[0].data = data.map(d => d.temp_f);
+                chart.data.datasets[1].data = data.map(d => d.humidity);
+                chart.data.datasets[2].data = data.map(d => d.hydrometer_a);
+                chart.data.datasets[3].data = data.map(d => d.hydrometer_b);
+                chart.update();
             })
-            .catch(err => console.log('Data fetch error:', err));
-    }, 1000);
+            .catch(err => {
+                alert('Error loading data: ' + err);
+                console.error(err);
+            });
+    });
 });

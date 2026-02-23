@@ -1,4 +1,4 @@
-# Greenhouse Monitor Configuration
+# auto-farm Configuration
 
 # Serial Port Configuration
 SERIAL_PORT = 'COM3'        # Change to your Arduino's port

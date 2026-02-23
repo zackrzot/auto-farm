@@ -1,6 +1,6 @@
 ╔════════════════════════════════════════════════════════════════════════════╗
 ║                                                                            ║
-║           🌱 GREENHOUSE MONITOR & CONTROL SYSTEM - PROJECT COMPLETE 🌱      ║
+║           auto-farm - PROJECT COMPLETE                    ║
 ║                                                                            ║
 ║                    Python Flask + Arduino IoT Solution                    ║
 ║                                                                            ║
@@ -10,30 +10,30 @@
 💻 WHAT WAS BUILT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-✓ Flask Web Server
+ - Flask Web Server
   • RESTful JSON API
   • Real-time WebSocket-style data update
   • Automatic serial communication
 
-✓ Arduino Firmware
+ - Arduino Firmware
   • Sensor data collection (temperature, humidity, soil moisture)
   • Automatic control (fan & watering)
   • Manual override capability
   • Serial command parsing
 
-✓ Web Dashboard
+ - Web Dashboard
   • Real-time sensor display
   • Manual control buttons
   • Key metrics at a glance
   • 1-second refresh rate
 
-✓ Historical Charting
+ - Historical Charting
   • Multi-line charts with Chart.js
   • Zoom by date/time range
   • 4+ datasets simultaneously
   • Responsive design
 
-✓ Database Logging
+ - Database Logging
   • SQLite persistence
   • Timestamp on every reading
   • Queryable by date range
@@ -64,7 +64,7 @@ Step 5: Run the application
   → Opens on http://127.0.0.1:5000
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 FEATURES AT A GLANCE
+FEATURES AT A GLANCE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Real-Time Monitoring               Manual Control
@@ -132,7 +132,7 @@ Documentation
 Dashboard (http://127.0.0.1:5000/)
 
     ╔════════════════════════════════════════╗
-    ║   🌱 GREENHOUSE MONITOR               ║
+    ║   auto-farm             ║
     ╠════════════════════════════════════════╣
     ║                                        ║
     ║ Temperature:     75.3 °F               ║
@@ -170,7 +170,7 @@ Charts (http://127.0.0.1:5000/chart)
     └────────────────────────────────────────┘
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔌 HARDWARE CONNECTIONS (Arduino)
+ HARDWARE CONNECTIONS (Arduino)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Digital Pins:
@@ -262,7 +262,7 @@ Visit the charts page:
 Select date range and click "Load Data" to see sample data visualization!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📚 DOCUMENTATION
+DOCUMENTATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Quick Guides:
@@ -280,14 +280,14 @@ Examples:
 ✨ HIGHLIGHTS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-✓ Full-Featured       Both automatic and manual control
-✓ Easy Setup          5 steps from nothing to running
-✓ Production Ready    Error handling, logging, graceful degradation
-✓ Well Documented    Multiple guides and examples
-✓ Extensible         Easy to add sensors or control outputs
-✓ No Dependencies     Just Flask, SQLAlchemy, PySerial
-✓ TestReady          Includes sample data generator
-✓ API Complete       RESTful endpoints for full control
+ - Full-Featured       Both automatic and manual control
+ - Easy Setup          5 steps from nothing to running
+ - Production Ready    Error handling, logging, graceful degradation
+ - Well Documented    Multiple guides and examples
+ - Extensible         Easy to add sensors or control outputs
+ - No Dependencies     Just Flask, SQLAlchemy, PySerial
+ - TestReady          Includes sample data generator
+ - API Complete       RESTful endpoints for full control
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

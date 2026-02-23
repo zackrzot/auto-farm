@@ -1,19 +1,19 @@
-# Greenhouse Monitor & Control System - Complete Project
+# auto-farm - Complete Project
 
-## 📋 Project Index
+## Project Index
 
-This document serves as the main entry point to understand and use the Greenhouse Monitor system.
+This document serves as the main entry point to understand and use auto-farm.
 
-### 🚀 Quick Start
+### Quick Start
 - **New to the project?** Start here: [QUICKSTART.md](QUICKSTART.md)
 - Just want to see what was built? [COMPLETION_SUMMARY.md](COMPLETION_SUMMARY.md)
 
-### 📖 Main Documentation
+### Main Documentation
 - **Full documentation**: [README.md](README.md)
 - **System architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
 - **This file**: [INDEX.md](INDEX.md)
 
-### 🛠️ Getting Started
+### Getting Started
 
 #### Step 1: Install Dependencies
 ```bash
@@ -92,38 +92,38 @@ Open `http://127.0.0.1:5000` in your browser
 
 ---
 
-## 🎯 Features
+## Features
 
-### ✅ Data Monitoring
+### Data Monitoring
 - Real-time temperature (°F)
 - Humidity percentage
 - Two soil moisture sensors (A & B) in percentage
 - Fan control signal (PWM 0-255)
 - Timestamp for all readings
 
-### ✅ Automatic Control
+### Automatic Control
 - **Temperature fan control**: Adjusts fan speed based on temperature deviation from 80°F
 - **Humidity fan control**: Adjusts fan speed based on humidity deviation from 75%
 - **Watering control**: Activates when soil moisture ≤ 75% (if temp ≥ 70°F), stops when ≥ 99%
 
-### ✅ Manual Control
+### Manual Control
 - Override automatic mode
 - Manually trigger watering
 - Set fan speed (0-255)
 - Return to automatic mode anytime
 
-### ✅ Data Logging
+### Data Logging
 - Continuous logging to SQLite database
 - Every sensor reading stored with timestamp
 - Queryable by date/time range
 
-### ✅ Historical Analysis
+### Historical Analysis
 - Web-based charting with Chart.js
 - Multi-line charts showing all sensors
 - Custom date range selection
 - Interactive visualization
 
-### ✅ Web Interface
+### Web Interface
 - Real-time dashboard
 - Clean control buttons
 - Responsive design
@@ -131,7 +131,7 @@ Open `http://127.0.0.1:5000` in your browser
 
 ---
 
-## 🔌 Hardware Requirements
+## Hardware Requirements
 
 | Component | Pin | Type | Purpose |
 |-----------|-----|------|---------|
@@ -145,7 +145,7 @@ Open `http://127.0.0.1:5000` in your browser
 
 ---
 
-## 📡 Communication Protocol
+## Communication Protocol
 
 ### Arduino → Flask (Data Every ~1.2 seconds)
 ```

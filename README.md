@@ -1,4 +1,4 @@
-# Auto Farm - Greenhouse Monitor & Control System
+# auto-farm - Automated Greenhouse Control System
 
 A Python Flask web application that monitors and controls a greenhouse environment by communicating with an Arduino microcontroller. The system tracks temperature, humidity, soil moisture, and allows manual control of watering and exhaust fan systems.
 

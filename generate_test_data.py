@@ -1,4 +1,4 @@
-"""Test data generator for greenhouse monitor (no Arduino needed)."""
+"""Test data generator for auto-farm (no Arduino needed)."""
 import sqlite3
 from datetime import datetime, timedelta
 import random

@@ -1,5 +1,5 @@
 """
-Example usage of the Greenhouse Monitor API.
+Example usage of the auto-farm API.
 This demonstrates how to interact with the Flask app programmatically.
 """
 
@@ -90,7 +90,7 @@ def get_historical_data(hours=24):
 def example_automation_script():
     """Example automated control sequence."""
     print("=" * 50)
-    print("Greenhouse Monitor - Example Automation Script")
+    print("auto-farm - Example Automation Script")
     print("=" * 50)
     
     # Get current conditions

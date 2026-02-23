@@ -20,7 +20,7 @@ SERIAL_PORT = 'COM5'  # Default, can be overridden with --port argument
 BAUD_RATE = 9600
 
 # Parse command line arguments
-parser = argparse.ArgumentParser(description='Greenhouse Monitor & Control System')
+parser = argparse.ArgumentParser(description='auto-farm - Automated Greenhouse Control System')
 parser.add_argument('--port', '-p', type=str, help='Arduino COM port (e.g., COM3, /dev/ttyUSB0)')
 args, unknown = parser.parse_known_args()
 
@@ -33,20 +33,20 @@ def init_serial():
     global ser
     try:
         ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
-        print(f"✓ Connected to {SERIAL_PORT} at {BAUD_RATE} baud")
+        print(f"Connected to {SERIAL_PORT} at {BAUD_RATE} baud")
         atexit.register(close_serial)
     except PermissionError as e:
-        print(f"\n❌ PERMISSION DENIED on {SERIAL_PORT}")
+        print(f"\nPERMISSION DENIED on {SERIAL_PORT}")
         print(f"   Possible causes:")
         print(f"   1. Another application is using this port (close Arduino IDE, etc.)")
         print(f"   2. Port is locked - try unplugging USB and plugging back in")
         print(f"   3. Need to run as Administrator")
         print(f"   Run this to check ports: python serial_diagnostic.py {SERIAL_PORT}\n")
     except serial.SerialException as e:
-        print(f"❌ Serial Error: {e}")
+        print(f"Serial Error: {e}")
         print(f"   Run this to see available ports: python find_arduino.py")
     except Exception as e:
-        print(f"❌ Failed to connect to {SERIAL_PORT}: {type(e).__name__}: {e}")
+        print(f"Failed to connect to {SERIAL_PORT}: {type(e).__name__}: {e}")
 
 def close_serial():
     global ser
@@ -85,6 +85,10 @@ def index():
 @app.route('/chart')
 def chart():
     return render_template('chart.html')
+
+@app.route('/camera')
+def camera():
+    return render_template('camera.html')
 
 @app.route('/api/data')
 def get_data():

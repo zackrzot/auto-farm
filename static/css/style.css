@@ -1,17 +1,25 @@
 body {
-    font-family: Arial, sans-serif;
-    margin: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    background-color: #f8f9fa;
 }
 
-#data {
-    margin-bottom: 20px;
+.card {
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
-#controls {
-    margin-bottom: 20px;
+#data p, #controls p {
+    margin-bottom: 0.5rem;
 }
 
-button {
-    margin: 5px;
-    padding: 10px;
+canvas {
+    max-width: 100%;
+    height: auto !important;
+    display: block;
+}
+
+#chart {
+    position: relative;
+    width: 100% !important;
+    height: 300px !important;
 }

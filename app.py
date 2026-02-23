@@ -147,35 +147,70 @@ def get_history():
             sensor_data = SensorData.query.filter(
                 SensorData.timestamp >= start_dt, 
                 SensorData.timestamp <= end_dt
-            ).all()
+            ).order_by(SensorData.timestamp).all()
             
             # Get trigger logs for the same period
             trigger_logs = TriggerLog.query.filter(
                 TriggerLog.timestamp >= start_dt,
                 TriggerLog.timestamp <= end_dt
-            ).all()
+            ).order_by(TriggerLog.timestamp).all()
             
-            # Build result with sensor data
-            result = [{
-                'timestamp': d.timestamp.isoformat(),
-                'temp_f': d.temp_f,
-                'fan_signal': d.fan_signal,
-                'hydrometer_a': d.hydrometer_a,
-                'hydrometer_b': d.hydrometer_b,
-                'humidity': d.humidity
-            } for d in sensor_data]
+            # Aggregate sensor data by minute
+            aggregated_data = {}
+            for data in sensor_data:
+                # Round timestamp to the nearest minute
+                minute_key = data.timestamp.replace(second=0, microsecond=0)
+                minute_iso = minute_key.isoformat()
+                
+                if minute_iso not in aggregated_data:
+                    aggregated_data[minute_iso] = {
+                        'timestamp': minute_key,
+                        'temperatures': [],
+                        'fan_signals': [],
+                        'humidity_values': [],
+                        'hydrometer_a_values': [],
+                        'hydrometer_b_values': [],
+                        'count': 0
+                    }
+                
+                aggregated_data[minute_iso]['temperatures'].append(data.temp_f if data.temp_f is not None else 0)
+                aggregated_data[minute_iso]['fan_signals'].append(data.fan_signal if data.fan_signal is not None else 0)
+                aggregated_data[minute_iso]['humidity_values'].append(data.humidity if data.humidity is not None else 0)
+                aggregated_data[minute_iso]['hydrometer_a_values'].append(data.hydrometer_a if data.hydrometer_a is not None else 0)
+                aggregated_data[minute_iso]['hydrometer_b_values'].append(data.hydrometer_b if data.hydrometer_b is not None else 0)
+                aggregated_data[minute_iso]['count'] += 1
             
-            # Build trigger log summary (by trigger name and timestamp)
+            # Calculate averages for each minute
+            result = []
+            for minute_iso in sorted(aggregated_data.keys()):
+                agg = aggregated_data[minute_iso]
+                if agg['count'] > 0:
+                    result.append({
+                        'timestamp': agg['timestamp'].isoformat(),
+                        'temp_f': sum(agg['temperatures']) / agg['count'],
+                        'fan_signal': sum(agg['fan_signals']) / agg['count'],
+                        'hydrometer_a': sum(agg['hydrometer_a_values']) / agg['count'],
+                        'hydrometer_b': sum(agg['hydrometer_b_values']) / agg['count'],
+                        'humidity': sum(agg['humidity_values']) / agg['count'],
+                        'data_points': agg['count']
+                    })
+            
+            # Build trigger log summary (by minute, taking the most recent state in each minute)
             trigger_summary = {}
             for log in trigger_logs:
-                key = log.timestamp.isoformat()
-                if key not in trigger_summary:
-                    trigger_summary[key] = {}
-                trigger_summary[key][log.trigger_name] = log.active
+                minute_key = log.timestamp.replace(second=0, microsecond=0)
+                minute_iso = minute_key.isoformat()
+                
+                if minute_iso not in trigger_summary:
+                    trigger_summary[minute_iso] = {}
+                
+                # Store the most recent (latest) state for each trigger in this minute
+                trigger_summary[minute_iso][log.trigger_name] = log.active
             
             return jsonify({
                 'sensor_data': result,
-                'trigger_logs': trigger_summary
+                'trigger_logs': trigger_summary,
+                'aggregation': 'minute'
             })
         except Exception as e:
             print(f"Error in get_history: {e}")

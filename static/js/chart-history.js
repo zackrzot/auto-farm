@@ -229,7 +229,7 @@ async function loadDayData(year, month, day) {
             return;
         }
         
-        document.getElementById('noDataMessage').style.display = 'none';
+        document.getElementById('noDataMessage').style.display = 'block';
         
         // Get unique trigger names from the logs
         const triggerNames = new Set();
@@ -239,11 +239,11 @@ async function loadDayData(year, month, day) {
         
         // Update chart with selected day's data
         if (chart) {
+            // Format labels as HH:MM for minute-aggregated data
             chart.data.labels = sensorData.map(d => {
                 const time = new Date(d.timestamp).toLocaleTimeString('en-US', { 
                     hour: '2-digit', 
-                    minute: '2-digit',
-                    second: '2-digit'
+                    minute: '2-digit'
                 });
                 return time;
             });
@@ -317,6 +317,7 @@ async function loadDayData(year, month, day) {
             }
             
             chart.update();
+            document.getElementById('noDataMessage').style.display = 'none';
         }
     } catch (error) {
         console.error('Error loading day data:', error);

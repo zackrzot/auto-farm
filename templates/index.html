@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-2">
         <div class="container">
             <a class="navbar-brand" href="/">auto-farm</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -23,12 +23,12 @@
             </div>
         </div>
     </nav>
-    <div class="container py-4">
-        <h1 class="mb-4">Live Monitor</h1>
+    <div class="container py-2">
+        <h1 class="mb-2">Live Monitor</h1>
 
         <div class="row">
             <div class="col-lg-5">
-                <div class="card mb-3">
+                <div class="card mb-2">
                     <div class="card-body">
                         <h5 class="card-title">Current Readings</h5>
                         <div id="data">
@@ -41,7 +41,7 @@
                     </div>
                 </div>
 
-                <div class="card mb-3">
+                <div class="card mb-2">
                     <div class="card-body">
                         <h5 class="card-title">Controls</h5>
                         <div id="controls">
@@ -53,6 +53,16 @@
                                 <input type="number" id="fan_speed" class="form-control" min="0" max="255">
                                 <button id="set_fan" class="btn btn-success mt-2">Set Fan</button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-2">
+                    <div class="card-body">
+                        <h5 class="card-title">Database Info</h5>
+                        <div id="db-info">
+                            <p>Records: <strong id="record-count">--</strong></p>
+                            <p>Size: <strong id="db-size">--</strong></p>
                         </div>
                     </div>
                 </div>

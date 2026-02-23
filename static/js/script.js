@@ -11,8 +11,21 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
+    function updateDbInfo() {
+        fetch('/api/db_info')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('record-count').textContent = data.record_count || '--';
+                let sizeMB = data.db_size ? (data.db_size / (1024 * 1024)).toFixed(2) + ' MB' : '--';
+                document.getElementById('db-size').textContent = sizeMB;
+            });
+    }
+
     setInterval(updateData, 1000);
     updateData();
+
+    setInterval(updateDbInfo, 10000);  // Update every 10 seconds
+    updateDbInfo();
 
     document.getElementById('water_on').addEventListener('click', () => sendCommand('W1'));
     document.getElementById('water_off').addEventListener('click', () => sendCommand('W0'));

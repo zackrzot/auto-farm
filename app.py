@@ -144,6 +144,22 @@ def get_history():
         return jsonify(result)
     return jsonify([])
 
+@app.route('/api/db_info')
+def get_db_info():
+    try:
+        record_count = SensorData.query.count()
+        db_path = 'instance/database.db'
+        if os.path.exists(db_path):
+            db_size = os.path.getsize(db_path)
+        else:
+            db_size = 0
+        return jsonify({
+            'record_count': record_count,
+            'db_size': db_size
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

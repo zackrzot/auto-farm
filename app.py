@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 import serial
 from serial import SerialException
 import threading
@@ -11,6 +11,9 @@ import json
 import argparse
 import os
 import atexit
+import cv2
+from PIL import Image, ImageDraw, ImageFont
+import io
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
@@ -21,14 +24,24 @@ db.init_app(app)
 SERIAL_PORT = 'COM5'  # Default, can be overridden with --port argument
 BAUD_RATE = 9600
 
+# Camera setup
+CAMERA_FOLDER = 'camera_images'
+if not os.path.exists(CAMERA_FOLDER):
+    os.makedirs(CAMERA_FOLDER)
+CAMERA_INDEX = 0  # Default, can be overridden with --camera-index argument
+
 # Parse command line arguments
 parser = argparse.ArgumentParser(description='auto-farm - Automated Greenhouse Control System')
 parser.add_argument('--port', '-p', type=str, help='Arduino COM port (e.g., COM3, /dev/ttyUSB0)')
+parser.add_argument('--camera-index', '-c', type=int, help='Webcam camera index (default: 0, use find_webcam.py to list available cameras)')
 args, unknown = parser.parse_known_args()
 
 if args.port:
     SERIAL_PORT = args.port
     print(f"Using COM port: {SERIAL_PORT}")
+if args.camera_index is not None:
+    CAMERA_INDEX = args.camera_index
+    print(f"Using camera index: {CAMERA_INDEX}")
 ser = None
 
 def init_serial():
@@ -139,6 +152,166 @@ def control():
 def send_command(cmd):
     if ser and ser.is_open:
         ser.write((cmd + '\n').encode())
+
+def capture_and_overlay_image():
+    """Capture image from webcam and overlay sensor stats"""
+    try:
+        # Get latest sensor data
+        latest_data = SensorData.query.order_by(SensorData.timestamp.desc()).first()
+        
+        # Try to capture from webcam
+        cap = cv2.VideoCapture(CAMERA_INDEX)
+        if not cap.isOpened():
+            return None
+        
+        ret, frame = cap.read()
+        cap.release()
+        
+        if not ret:
+            return None
+        
+        # Convert BGR to RGB for PIL
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(frame_rgb)
+        
+        # Draw overlay with sensor stats
+        draw = ImageDraw.Draw(img)
+        
+        # Try to load a font, fallback to default if not available
+        try:
+            font_large = ImageFont.truetype("arial.ttf", 24)
+            font_small = ImageFont.truetype("arial.ttf", 18)
+        except:
+            font_large = ImageFont.load_default()
+            font_small = ImageFont.load_default()
+        
+        # Prepare text
+        timestamp = get_accurate_time()
+        timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        
+        overlay_text = [
+            f"Timestamp: {timestamp_str}",
+            ""
+        ]
+        
+        if latest_data:
+            overlay_text.extend([
+                f"Temperature: {latest_data.temp_f:.1f}°F",
+                f"Humidity: {latest_data.humidity:.1f}%",
+                f"Soil A: {latest_data.hydrometer_a:.1f}%",
+                f"Soil B: {latest_data.hydrometer_b:.1f}%",
+                f"Fan: {latest_data.fan_signal:.0f}"
+            ])
+        else:
+            overlay_text.extend([
+                "Temperature: --",
+                "Humidity: --",
+                "Soil A: --",
+                "Soil B: --",
+                "Fan: --"
+            ])
+        
+        # Draw semi-transparent background and text
+        y_offset = 20
+        for text in overlay_text:
+            # Draw semi-transparent background
+            bbox = draw.textbbox((20, y_offset), text, font=font_large if "Timestamp" in text else font_small)
+            draw.rectangle([(bbox[0]-5, bbox[1]-2), (bbox[2]+5, bbox[3]+2)], 
+                           fill=(0, 0, 0, 180) if hasattr(draw, 'rectangle') else (0, 0, 0))
+            
+            # Draw text
+            draw.text((20, y_offset), text, fill=(255, 255, 255), 
+                     font=font_large if "Timestamp" in text else font_small)
+            y_offset += 35 if "Timestamp" in text else 28
+        
+        return img, timestamp
+    except Exception as e:
+        print(f"Error capturing image: {e}")
+        return None
+
+@app.route('/api/camera/capture', methods=['POST'])
+def capture_camera():
+    """Capture image from webcam with overlay and save to disk"""
+    try:
+        result = capture_and_overlay_image()
+        if result is None:
+            return jsonify({'error': 'Could not capture image from webcam'}), 400
+        
+        img, timestamp = result
+        
+        # Save image
+        filename = timestamp.strftime("%Y%m%d_%H%M%S") + ".jpg"
+        filepath = os.path.join(CAMERA_FOLDER, filename)
+        img.save(filepath)
+        
+        return jsonify({
+            'status': 'ok',
+            'filename': filename,
+            'timestamp': timestamp.isoformat(),
+            'path': filepath
+        })
+    except Exception as e:
+        print(f"Error in capture_camera: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/camera/latest')
+def get_latest_image():
+    """Get info about the latest captured image"""
+    try:
+        files = sorted([f for f in os.listdir(CAMERA_FOLDER) if f.endswith('.jpg')], reverse=True)
+        if not files:
+            return jsonify({'error': 'No images found'}), 404
+        
+        latest_file = files[0]
+        filepath = os.path.join(CAMERA_FOLDER, latest_file)
+        file_stat = os.stat(filepath)
+        
+        return jsonify({
+            'filename': latest_file,
+            'timestamp': datetime.fromtimestamp(file_stat.st_mtime).isoformat(),
+            'size': file_stat.st_size
+        })
+    except Exception as e:
+        print(f"Error in get_latest_image: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/camera/images')
+def get_camera_images():
+    """Get list of all captured images"""
+    try:
+        images = []
+        files = sorted([f for f in os.listdir(CAMERA_FOLDER) if f.endswith('.jpg')], reverse=True)
+        
+        for filename in files:
+            filepath = os.path.join(CAMERA_FOLDER, filename)
+            file_stat = os.stat(filepath)
+            images.append({
+                'filename': filename,
+                'timestamp': datetime.fromtimestamp(file_stat.st_mtime).isoformat(),
+                'size': file_stat.st_size
+            })
+        
+        return jsonify({'images': images})
+    except Exception as e:
+        print(f"Error in get_camera_images: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/camera/images/<filename>')
+def serve_image(filename):
+    """Serve a camera image"""
+    try:
+        # Security: prevent directory traversal
+        if '..' in filename or '/' in filename or '\\' in filename:
+            return jsonify({'error': 'Invalid filename'}), 400
+        
+        filepath = os.path.join(CAMERA_FOLDER, filename)
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'Image not found'}), 404
+        
+        return send_file(filepath, mimetype='image/jpeg')
+    except Exception as e:
+        print(f"Error serving image: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/history')
 def get_history():

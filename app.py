@@ -6,6 +6,7 @@ import time
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 from models import db, SensorData, TriggerLog
+from config import get_accurate_time
 import json
 import argparse
 import os
@@ -69,7 +70,7 @@ def read_serial():
                         hydrometer_a = float(parts[2])
                         hydrometer_b = float(parts[3])
                         humidity = float(parts[4])
-                        timestamp = datetime.now()
+                        timestamp = get_accurate_time()
                         data = SensorData(timestamp=timestamp, temp_f=temp_f, fan_signal=fan_signal,
                                         hydrometer_a=hydrometer_a, hydrometer_b=hydrometer_b, humidity=humidity)
                         with app.app_context():
@@ -94,6 +95,15 @@ def camera():
 @app.route('/triggers')
 def triggers():
     return render_template('triggers.html')
+
+@app.route('/api/time')
+def get_time():
+    """Return current accurate time from NTP server"""
+    accurate_time = get_accurate_time()
+    return jsonify({
+        'timestamp': accurate_time.isoformat(),
+        'unix_timestamp': accurate_time.timestamp()
+    })
 
 @app.route('/api/data')
 def get_data():

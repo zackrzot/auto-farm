@@ -1,4 +1,16 @@
 # auto-farm Configuration
+import ntplib
+from datetime import datetime
+
+def get_accurate_time():
+    """Get current time from NTP server, fallback to system time if unavailable."""
+    try:
+        client = ntplib.NTPClient()
+        response = client.request('pool.ntp.org', version=3, timeout=5)
+        return datetime.fromtimestamp(response.tx_time)
+    except Exception as e:
+        print(f"Warning: Could not sync time with NTP server: {e}")
+        return datetime.now()
 
 # Serial Port Configuration
 SERIAL_PORT = 'COM3'        # Change to your Arduino's port

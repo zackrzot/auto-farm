@@ -225,15 +225,17 @@ def get_available_dates():
     if not year or not month:
         return jsonify({'error': 'year and month required'}), 400
     
-    # Get first and last day of the month
+    # Get first day of the month (start at midnight)
     month_start = datetime(year, month, 1)
-    month_end = month_start + relativedelta(months=1) - relativedelta(days=1)
-    month_end = month_end.replace(hour=23, minute=59, second=59)
     
-    # Get all dates with data for this month
+    # Get first day of NEXT month (to capture all data through end of current month)
+    # Add 24 hours extra to account for timezone differences
+    month_end = month_start + relativedelta(months=1) + relativedelta(days=1)
+    
+    # Get all dates with data for this month and nearby dates
     data = SensorData.query.filter(
         SensorData.timestamp >= month_start,
-        SensorData.timestamp <= month_end
+        SensorData.timestamp < month_end
     ).all()
     
     # Extract unique dates

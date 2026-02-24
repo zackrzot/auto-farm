@@ -201,9 +201,17 @@ function selectDay(year, month, day) {
 // Load data for a specific day
 async function loadDayData(year, month, day) {
     try {
-        // Create start and end timestamps for the selected day
-        const start = new Date(year, month, day, 0, 0, 0).toISOString();
-        const end = new Date(year, month, day, 23, 59, 59).toISOString();
+        // Create start and end timestamps for the selected day (using local date range, matching database UTC times)
+        // Use start of day in local time and end of day in local time, converted to UTC
+        const startLocal = new Date(year, month, day, 0, 0, 0);
+        const endLocal = new Date(year, month, day, 23, 59, 59);
+        
+        // Get the local offset to adjust UTC times back to local date range
+        const offsetMs = startLocal.getTimezoneOffset() * 60 * 1000;
+        
+        // Adjust times to get UTC equivalent of local midnight to 23:59:59
+        const start = new Date(startLocal.getTime() - offsetMs).toISOString();
+        const end = new Date(endLocal.getTime() - offsetMs).toISOString();
         
         const response = await fetch(`/api/history?start=${start}&end=${end}`);
         

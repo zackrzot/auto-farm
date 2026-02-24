@@ -153,30 +153,24 @@ def send_command(cmd):
     if ser and ser.is_open:
         ser.write((cmd + '\n').encode())
 
-def capture_and_overlay_image():
-    """Capture image from webcam and overlay sensor stats"""
+def capture_and_overlay_image(trigger_event=None, trigger_name=None):
+    """Capture image from webcam and overlay sensor stats. Optionally overlay trigger event info."""
     try:
         # Get latest sensor data
         latest_data = SensorData.query.order_by(SensorData.timestamp.desc()).first()
-        
         # Try to capture from webcam
         cap = cv2.VideoCapture(CAMERA_INDEX)
         if not cap.isOpened():
             return None
-        
         ret, frame = cap.read()
         cap.release()
-        
         if not ret:
             return None
-        
         # Convert BGR to RGB for PIL
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         img = Image.fromarray(frame_rgb)
-        
         # Draw overlay with sensor stats
         draw = ImageDraw.Draw(img)
-        
         # Try to load a font, fallback to default if not available
         try:
             font_large = ImageFont.truetype("arial.ttf", 24)
@@ -184,16 +178,10 @@ def capture_and_overlay_image():
         except:
             font_large = ImageFont.load_default()
             font_small = ImageFont.load_default()
-        
         # Prepare text
         timestamp = get_accurate_time()
         timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
-        
-        overlay_text = [
-            f"Timestamp: {timestamp_str}",
-            ""
-        ]
-        
+        overlay_text = [f"Timestamp: {timestamp_str}", ""]
         if latest_data:
             overlay_text.extend([
                 f"Temperature: {latest_data.temp_f:.1f}°F",
@@ -210,20 +198,18 @@ def capture_and_overlay_image():
                 "Soil B: --",
                 "Fan: --"
             ])
-        
+        # Add trigger event info if provided
+        if trigger_event and trigger_name:
+            overlay_text.append("")
+            overlay_text.append(f"Trigger: {trigger_name}")
+            overlay_text.append(f"Event: {trigger_event}")
         # Draw semi-transparent background and text
         y_offset = 20
         for text in overlay_text:
-            # Draw semi-transparent background
             bbox = draw.textbbox((20, y_offset), text, font=font_large if "Timestamp" in text else font_small)
-            draw.rectangle([(bbox[0]-5, bbox[1]-2), (bbox[2]+5, bbox[3]+2)], 
-                           fill=(0, 0, 0, 180) if hasattr(draw, 'rectangle') else (0, 0, 0))
-            
-            # Draw text
-            draw.text((20, y_offset), text, fill=(255, 255, 255), 
-                     font=font_large if "Timestamp" in text else font_small)
+            draw.rectangle([(bbox[0]-5, bbox[1]-2), (bbox[2]+5, bbox[3]+2)], fill=(0, 0, 0, 180) if hasattr(draw, 'rectangle') else (0, 0, 0))
+            draw.text((20, y_offset), text, fill=(255, 255, 255), font=font_large if "Timestamp" in text else font_small)
             y_offset += 35 if "Timestamp" in text else 28
-        
         return img, timestamp
     except Exception as e:
         print(f"Error capturing image: {e}")
@@ -455,7 +441,6 @@ def calculate_and_log_triggers():
         hyd_a = latest.hydrometer_a
         hyd_b = latest.hydrometer_b
         fan = latest.fan_signal
-        
         # Define triggers
         triggers.append({
             'name': 'Air Temp Cooldown',
@@ -463,58 +448,63 @@ def calculate_and_log_triggers():
             'active': temp > 90,
             'details': f'Current temp: {temp}°F'
         })
-        
         triggers.append({
             'name': 'High Humidity Control',
             'description': 'If humidity > 80%, fan runs at 50% minimum',
             'active': humidity > 80,
             'details': f'Current humidity: {humidity}%'
         })
-        
         triggers.append({
             'name': 'Soil Moisture Low (A)',
             'description': 'If soil moisture A < 30%, activate water pump',
             'active': hyd_a < 30,
             'details': f'Current soil moisture A: {hyd_a}%'
         })
-        
         triggers.append({
             'name': 'Soil Moisture Low (B)',
             'description': 'If soil moisture B < 30%, activate water pump',
             'active': hyd_b < 30,
             'details': f'Current soil moisture B: {hyd_b}%'
         })
-        
         triggers.append({
             'name': 'Critical Temperature Alert',
             'description': 'If temp > 95°F, sound alarm and max fan',
             'active': temp > 95,
             'details': f'Current temp: {temp}°F'
         })
-        
         triggers.append({
             'name': 'Fan Status Monitor',
             'description': 'Fan is running if signal > 0',
             'active': fan > 0,
             'details': f'Current fan signal: {fan}'
         })
-        
-        # Log each trigger state to database
+        # Log each trigger state to database and capture images at start/stop
         timestamp = latest.timestamp
         for trigger in triggers:
+            # Check previous state for this trigger
+            prev_log = TriggerLog.query.filter_by(trigger_name=trigger['name']).order_by(TriggerLog.timestamp.desc()).first()
+            prev_active = prev_log.active if prev_log else None
+            # Detect start (False->True) and stop (True->False)
+            if prev_active is not None and prev_active != trigger['active']:
+                event_type = 'start' if trigger['active'] else 'stop'
+                # Capture image with overlay
+                result = capture_and_overlay_image(trigger_event=event_type.capitalize(), trigger_name=trigger['name'])
+                if result is not None:
+                    img, ts = result
+                    filename = ts.strftime("%Y%m%d_%H%M%S") + f"_{trigger['name'].replace(' ','_')}_{event_type}.jpg"
+                    filepath = os.path.join(CAMERA_FOLDER, filename)
+                    img.save(filepath)
             log_entry = TriggerLog(
                 timestamp=timestamp,
                 trigger_name=trigger['name'],
                 active=trigger['active']
             )
             db.session.add(log_entry)
-        
         try:
             db.session.commit()
         except Exception as e:
             db.session.rollback()
             print(f"Error logging triggers: {e}")
-    
     return triggers
 
 @app.route('/api/triggers')

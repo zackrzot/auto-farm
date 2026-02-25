@@ -21,25 +21,34 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
+    function updateLatestImage() {
+        fetch('/api/camera/latest')
+            .then(response => response.json())
+            .then(data => {
+                const imgEl = document.getElementById('latest-image');
+                const infoEl = document.getElementById('latest-image-info');
+                if (data && data.filename) {
+                    imgEl.src = `/camera/images/${data.filename}`;
+                    infoEl.textContent = `Captured: ${new Date(data.timestamp).toLocaleString()} | Size: ${(data.size/1024).toFixed(1)} KB`;
+                } else {
+                    imgEl.src = '';
+                    infoEl.textContent = 'No image available.';
+                }
+            })
+            .catch(() => {
+                const imgEl = document.getElementById('latest-image');
+                const infoEl = document.getElementById('latest-image-info');
+                imgEl.src = '';
+                infoEl.textContent = 'No image available.';
+            });
+    }
+
     setInterval(updateData, 1000);
     updateData();
 
     setInterval(updateDbInfo, 10000);  // Update every 10 seconds
     updateDbInfo();
 
-    document.getElementById('water_on').addEventListener('click', () => sendCommand('W1'));
-    document.getElementById('water_off').addEventListener('click', () => sendCommand('W0'));
-    document.getElementById('auto').addEventListener('click', () => sendCommand('A'));
-    document.getElementById('set_fan').addEventListener('click', () => {
-        const speed = document.getElementById('fan_speed').value;
-        sendCommand(`F:${speed}`);
-    });
-
-    function sendCommand(cmd) {
-        fetch('/api/control', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ command: cmd })
-        });
-    }
+    setInterval(updateLatestImage, 10000); // Update image every 10 seconds
+    updateLatestImage();
 });

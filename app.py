@@ -456,15 +456,23 @@ def calculate_and_log_triggers():
         })
         triggers.append({
             'name': 'Soil Moisture Low (A)',
-            'description': 'If soil moisture A < 30%, activate water pump',
+            'description': 'If soil moisture A < 30%, activate water valve',
             'active': hyd_a < 30,
             'details': f'Current soil moisture A: {hyd_a}%'
         })
         triggers.append({
             'name': 'Soil Moisture Low (B)',
-            'description': 'If soil moisture B < 30%, activate water pump',
+            'description': 'If soil moisture B < 30%, activate water valve',
             'active': hyd_b < 30,
             'details': f'Current soil moisture B: {hyd_b}%'
+        })
+        # Water valve monitor trigger (example: valve is open if either soil moisture low trigger is active)
+        water_valve_active = (hyd_a < 30) or (hyd_b < 30)
+        triggers.append({
+            'name': 'Water Valve Monitor',
+            'description': 'Water valve is open if soil moisture low triggers are active',
+            'active': water_valve_active,
+            'details': f"Water valve status: {'Open' if water_valve_active else 'Closed'}"
         })
         triggers.append({
             'name': 'Critical Temperature Alert',

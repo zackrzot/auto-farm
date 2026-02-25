@@ -3,7 +3,10 @@ let chartData = {
     labels: [],
     temps: [],
     humidities: [],
-    fans: []
+    fans: [],
+    hydrometer_a: [],
+    hydrometer_b: [],
+    water_valve: []
 };
 
 function initChart() {
@@ -55,6 +58,36 @@ function initChart() {
                     tension: 0.4,
                     pointRadius: 0,
                     pointHoverRadius: 5
+                },
+                {
+                    label: 'Water Valve',
+                    data: chartData.water_valve,
+                    borderColor: 'rgb(40, 167, 69)',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 5
+                },
+                {
+                    label: 'Soil Moisture A',
+                    data: chartData.hydrometer_a,
+                    borderColor: 'rgb(255, 193, 7)',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 5
+                },
+                {
+                    label: 'Soil Moisture B',
+                    data: chartData.hydrometer_b,
+                    borderColor: 'rgb(23, 162, 184)',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 5
                 }
             ]
         },
@@ -98,14 +131,15 @@ function initChart() {
 
 function updateLiveChart(data) {
     if (!liveChart) return;
-
     const time = new Date(data.timestamp).toLocaleTimeString();
-    
     chartData.labels.push(time);
     chartData.temps.push(parseFloat(data.temp_f) || 0);
     chartData.humidities.push(parseFloat(data.humidity) || 0);
     chartData.fans.push(parseFloat(data.fan_signal) || 0);
-
+    chartData.hydrometer_a.push(parseFloat(data.hydrometer_a) || 0);
+    chartData.hydrometer_b.push(parseFloat(data.hydrometer_b) || 0);
+    // Water valve: 1 if either soil moisture low, else 0
+    chartData.water_valve.push(((parseFloat(data.hydrometer_a) < 30) || (parseFloat(data.hydrometer_b) < 30)) ? 1 : 0);
     // Keep only last 60 points
     const maxPoints = 60;
     if (chartData.labels.length > maxPoints) {
@@ -113,13 +147,17 @@ function updateLiveChart(data) {
         chartData.temps.shift();
         chartData.humidities.shift();
         chartData.fans.shift();
+        chartData.hydrometer_a.shift();
+        chartData.hydrometer_b.shift();
+        chartData.water_valve.shift();
     }
-
     liveChart.data.labels = chartData.labels;
     liveChart.data.datasets[0].data = chartData.temps;
     liveChart.data.datasets[1].data = chartData.humidities;
     liveChart.data.datasets[2].data = chartData.fans;
-    
+    liveChart.data.datasets[3].data = chartData.water_valve;
+    liveChart.data.datasets[4].data = chartData.hydrometer_a;
+    liveChart.data.datasets[5].data = chartData.hydrometer_b;
     liveChart.update('none');
 }
 

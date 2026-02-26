@@ -5,9 +5,9 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 document.getElementById('temp').textContent = data.temp_f || '--';
                 document.getElementById('humidity').textContent = data.humidity || '--';
-                document.getElementById('hyd_a').textContent = data.hydrometer_a || '--';
-                document.getElementById('hyd_b').textContent = data.hydrometer_b || '--';
-                document.getElementById('fan').textContent = data.fan_signal || '--';
+                document.getElementById('hyd_a').textContent = (typeof data.hydrometer_a === 'number') ? Math.round(data.hydrometer_a) : (data.hydrometer_a || '--');
+                document.getElementById('hyd_b').textContent = (typeof data.hydrometer_b === 'number') ? Math.round(data.hydrometer_b) : (data.hydrometer_b || '--');
+                document.getElementById('fan').textContent = (typeof data.fan_signal === 'number') ? Math.round(data.fan_signal) : (data.fan_signal || '--');
             });
     }
 

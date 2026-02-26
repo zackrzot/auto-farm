@@ -61,6 +61,18 @@
                             <div id="latest-image-info" class="mt-2 text-muted" style="font-size:0.95rem;"></div>
                         </div>
                     <script>
+                    function loadLatestImage() {
+                        fetch('/api/camera/latest')
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data && data.filename) {
+                                    const img = document.getElementById('latest-image');
+                                    img.src = `/camera/images/${data.filename}?t=${Date.now()}`;
+                                    document.getElementById('latest-image-info').textContent = new Date(data.timestamp).toLocaleString();
+                                }
+                            });
+                    }
+                    loadLatestImage();
                     function getImage() {
                         const btn = document.getElementById('get-image-btn');
                         btn.disabled = true;
@@ -69,7 +81,6 @@
                             .then(res => res.json())
                             .then(data => {
                                 if (data.status === 'ok') {
-                                    // Optionally reload the latest image
                                     setTimeout(loadLatestImage, 1000);
                                 } else {
                                     alert('Failed to capture image.');

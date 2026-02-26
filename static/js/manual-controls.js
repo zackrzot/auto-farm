@@ -23,6 +23,10 @@ function triggerDevice(device, action) {
             command = `F:${speed}`;
             break;
         // No lights control implemented
+        case 'auto':
+            // Release manual control, return to auto mode
+            command = 'A';
+            break;
         default:
             alert('Unknown device');
             return;

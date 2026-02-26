@@ -454,8 +454,8 @@ def calculate_and_log_triggers():
         # Define triggers
         triggers.append({
             'name': 'Air Temp Cooldown',
-            'description': 'If temp > 90°F, fan speed scales to 100% from 90-95°F',
-            'active': temp > 90,
+            'description': 'If temp > 80°F, fan speed scales to 100% from 80-85°F',
+            'active': temp > 80,
             'details': f'Current temp: {temp}°F'
         })
         triggers.append({
@@ -483,12 +483,6 @@ def calculate_and_log_triggers():
             'description': 'Water valve is open if soil moisture low triggers are active',
             'active': water_valve_active,
             'details': f"Water valve status: {'Open' if water_valve_active else 'Closed'}"
-        })
-        triggers.append({
-            'name': 'Critical Temperature Alert',
-            'description': 'If temp > 95°F, sound alarm and max fan',
-            'active': temp > 95,
-            'details': f'Current temp: {temp}°F'
         })
         triggers.append({
             'name': 'Fan Status Monitor',

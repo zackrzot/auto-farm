@@ -76,12 +76,12 @@ void loop() {
       // Always set PWM
       analogWrite(fan_pwm_pin, (int)fan_speed);
 
-      // Relay logic: relay ON if speed > 0, relay OFF if speed == 0
-      // This ensures the fan is fully powered down when speed is zero
+      // Relay logic: relay ON when speed == 0, relay OFF when speed > 0
+      // This reverses previous logic: relay ON cuts fan power, relay OFF enables fan
       if ((int)fan_speed == 0) {
-        digitalWrite(fan_relay_pin, LOW); // Relay OFF, fan power cut
+        digitalWrite(fan_relay_pin, HIGH); // Relay ON, fan power cut
       } else {
-        digitalWrite(fan_relay_pin, HIGH); // Relay ON, fan powered
+        digitalWrite(fan_relay_pin, LOW); // Relay OFF, fan powered
       }
     }
   }

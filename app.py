@@ -93,9 +93,15 @@ def read_serial():
                 print(f"Error reading serial: {e}")
         time.sleep(0.1)
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# Manual trigger page
+@app.route('/manual')
+def manual():
+    return render_template('manual.html')
 
 @app.route('/chart')
 def chart():
@@ -132,11 +138,13 @@ def get_data():
         })
     return jsonify({})
 
+
 @app.route('/api/control', methods=['POST'])
 def control():
     data = request.json
     command = data.get('command')
-    if command in ['W1', 'W0', 'A']:
+    # Accept valve, fan, and light commands
+    if command in ['W1', 'W0', 'A', 'L1', 'L0']:
         send_command(command)
         return jsonify({'status': 'ok'})
     elif command.startswith('F:'):

@@ -269,14 +269,17 @@ def get_latest_image():
         print(f"Error in get_latest_image: {e}")
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/api/camera/images')
 def get_camera_images():
-    """Get list of all captured images"""
+    """Get list of captured images with pagination (limit, offset)"""
     try:
+        limit = request.args.get('limit', default=10, type=int)
+        offset = request.args.get('offset', default=0, type=int)
         images = []
         files = sorted([f for f in os.listdir(CAMERA_FOLDER) if f.endswith('.jpg')], reverse=True)
-        
-        for filename in files:
+        paged_files = files[offset:offset+limit]
+        for filename in paged_files:
             filepath = os.path.join(CAMERA_FOLDER, filename)
             file_stat = os.stat(filepath)
             images.append({
@@ -284,8 +287,7 @@ def get_camera_images():
                 'timestamp': datetime.fromtimestamp(file_stat.st_mtime).isoformat(),
                 'size': file_stat.st_size
             })
-        
-        return jsonify({'images': images})
+        return jsonify({'images': images, 'total': len(files)})
     except Exception as e:
         print(f"Error in get_camera_images: {e}")
         return jsonify({'error': str(e)}), 500
@@ -490,9 +492,9 @@ def calculate_and_log_triggers():
         })
         triggers.append({
             'name': 'Fan Status Monitor',
-            'description': 'Fan is running if signal > 0',
+            'description': 'Fan is running only if signal > 0 (relay is OFF when signal is 0, cutting power)',
             'active': fan > 0,
-            'details': f'Current fan signal: {fan}'
+            'details': f'Current fan signal: {fan} (0 = relay OFF, fan fully powered down)'
         })
         # Log each trigger state to database and capture images at start/stop
         timestamp = latest.timestamp

@@ -283,34 +283,38 @@
         </div>
     </nav>
 
-    <div class="container py-4">
-           <!-- Removed redundant page title -->
 
-        <!-- Camera Display -->
-        <div class="card">
-            <div class="card-body">
-                <div class="camera-container">
-                    <div class="spinner-border loading-spinner text-light" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <img id="cameraImage" src="" alt="Camera Feed" style="display: none;">
-                    <div id="noCamera" class="alert alert-warning m-0" style="display: none;">
-                        <strong>No camera available</strong>. Please ensure a webcam is connected to your system.
+    <div class="container py-4">
+        <!-- Compact horizontal layout for camera and controls -->
+        <div class="row g-4 align-items-stretch mb-4">
+            <div class="col-lg-7 col-md-6">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <div class="camera-container mb-0">
+                            <div class="spinner-border loading-spinner text-light" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <img id="cameraImage" src="" alt="Camera Feed" style="display: none;">
+                            <div id="noCamera" class="alert alert-warning m-0" style="display: none;">
+                                <strong>No camera available</strong>. Please ensure a webcam is connected to your system.
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Image Statistics -->
-                <!-- Stats UI removed; info is now only on the image overlay -->
-
-                <!-- Camera Controls -->
-                <div class="camera-controls">
-                    <button id="captureBtn" class="btn btn-primary">
-                        <span class="spinner-border spinner-border-sm me-2" id="captureSpinner" style="display: none;"></span>
-                        Capture Image
-                    </button>
-                    <button id="autoRefreshBtn" class="btn btn-outline-secondary" data-auto-refresh="false">
-                        Enable Auto-Refresh
-                    </button>
+            </div>
+            <div class="col-lg-5 col-md-6">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <div class="camera-controls flex-column flex-md-row d-flex gap-2 justify-content-center align-items-center mb-0">
+                            <button id="captureBtn" class="btn btn-primary w-100">
+                                <span class="spinner-border spinner-border-sm me-2" id="captureSpinner" style="display: none;"></span>
+                                Capture Image
+                            </button>
+                            <button id="autoRefreshBtn" class="btn btn-outline-secondary w-100" data-auto-refresh="false">
+                                Enable Auto-Refresh
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -344,9 +348,13 @@
 
     <!-- Image Modal/Lightbox -->
     <div id="imageModal" class="image-modal">
-        <div class="image-modal-content">
-            <button class="image-modal-close" id="modalClose">&times;</button>
-            <img id="modalImage" src="" alt="Enlarged view">
+        <div class="d-flex justify-content-between align-items-center w-100" style="height:100vh;">
+            <button id="modalPrev" class="btn btn-light ms-2" style="height:60px;width:60px;z-index:1100;" title="Previous"><span style="font-size:2rem;">&#8592;</span></button>
+            <div class="image-modal-content position-relative mx-2" style="max-width:95vw;max-height:95vh;">
+                <button class="image-modal-close" id="modalClose">&times;</button>
+                <img id="modalImage" src="" alt="Enlarged view">
+            </div>
+            <button id="modalNext" class="btn btn-light me-2" style="height:60px;width:60px;z-index:1100;" title="Next"><span style="font-size:2rem;">&#8594;</span></button>
         </div>
     </div>
 

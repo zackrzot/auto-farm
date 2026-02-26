@@ -72,14 +72,16 @@ void loop() {
       double fan_speed = speed_str.toDouble();
       fan_speed = constrain(fan_speed, 0, 255);
       fan_signal = fan_speed;
-      
+
+      // Always set PWM
       analogWrite(fan_pwm_pin, (int)fan_speed);
-      
-      // Relay logic: enable relay when speed > 0
-      if (fan_speed > 0) {
-        digitalWrite(fan_relay_pin, HIGH);
+
+      // Relay logic: relay ON if speed > 0, relay OFF if speed == 0
+      // This ensures the fan is fully powered down when speed is zero
+      if ((int)fan_speed == 0) {
+        digitalWrite(fan_relay_pin, LOW); // Relay OFF, fan power cut
       } else {
-        digitalWrite(fan_relay_pin, LOW);
+        digitalWrite(fan_relay_pin, HIGH); // Relay ON, fan powered
       }
     }
   }

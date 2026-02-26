@@ -7,11 +7,22 @@ function triggerDevice(device, action) {
             command = (action === 'open') ? 'W1' : 'W0';
             break;
         case 'fan':
-            command = (action === 'on') ? 'F:255' : 'F:0';
+            // Prompt user for speed value (0-255)
+            let speed = 255;
+            if (action === 'set') {
+                speed = prompt('Enter fan speed (0-255):', '128');
+                if (speed === null) return; // Cancelled
+                speed = parseInt(speed, 10);
+                if (isNaN(speed) || speed < 0 || speed > 255) {
+                    alert('Invalid speed. Enter a value between 0 and 255.');
+                    return;
+                }
+            } else {
+                speed = (action === 'on') ? 255 : 0;
+            }
+            command = `F:${speed}`;
             break;
-        case 'lights':
-            command = (action === 'on') ? 'L1' : 'L0';
-            break;
+        // No lights control implemented
         default:
             alert('Unknown device');
             return;

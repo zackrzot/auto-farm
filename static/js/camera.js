@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const imageModal = document.getElementById('imageModal');
     const modalImage = document.getElementById('modalImage');
     const modalClose = document.getElementById('modalClose');
+    const modalPrev = document.getElementById('modalPrev');
+    const modalNext = document.getElementById('modalNext');
 
     let allImages = [];
     let currentImageIndex = -1;
@@ -91,50 +93,49 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    // Load gallery of all images
-    function loadGallery() {
-        fetch('/api/camera/images')
+    // Gallery paging state
+    let galleryOffset = 0;
+    const GALLERY_LIMIT = 10;
+    let galleryTotal = 0;
+
+    function loadGallery(initial = false) {
+        fetch(`/api/camera/images?limit=${GALLERY_LIMIT}&offset=${galleryOffset}`)
             .then(response => response.json())
             .then(data => {
-                allImages = data.images || [];
-
-                if (allImages.length === 0) {
+                if (initial) {
+                    allImages = [];
+                    gallerySlider.innerHTML = '';
+                }
+                const images = data.images || [];
+                galleryTotal = data.total || 0;
+                if (initial && images.length === 0) {
                     emptyGallery.style.display = 'block';
                     galleryContent.style.display = 'none';
                     galleryCount.textContent = '';
                 } else {
                     emptyGallery.style.display = 'none';
                     galleryContent.style.display = 'block';
-                    galleryCount.textContent = `(${allImages.length} images)`;
-
-                    // Clear existing items
-                    gallerySlider.innerHTML = '';
-
+                    galleryCount.textContent = `(${galleryTotal} images)`;
                     // Add gallery items
-                    allImages.forEach((image, index) => {
+                    images.forEach((image, index) => {
+                        const globalIndex = galleryOffset + index;
+                        allImages[globalIndex] = image;
                         const item = document.createElement('div');
                         item.className = 'gallery-item';
                         item.style.cursor = 'pointer';
-                        item.dataset.index = index;
-
+                        item.dataset.index = globalIndex;
                         const img = document.createElement('img');
                         img.src = `/camera/images/${image.filename}`;
                         img.alt = `Captured ${image.timestamp}`;
-
                         item.appendChild(img);
                         item.addEventListener('click', () => {
-                            selectImage(index);
+                            selectImage(globalIndex);
                             openImageModal(image.filename);
                         });
-
                         gallerySlider.appendChild(item);
                     });
-
-                    // Show navigation buttons if there are many images
                     updateGalleryNavigation();
-                    
-                    // Select the first (most recent) image
-                    if (allImages.length > 0) {
+                    if (initial && images.length > 0) {
                         selectImage(0);
                     }
                 }
@@ -145,6 +146,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 galleryContent.style.display = 'none';
             });
     }
+
+    // Load more images when scrolling to end
+    gallerySlider.addEventListener('scroll', function() {
+        if (gallerySlider.scrollLeft + gallerySlider.clientWidth >= gallerySlider.scrollWidth - 10) {
+            // If not all images loaded, load next batch
+            if (allImages.length < galleryTotal) {
+                galleryOffset = allImages.length;
+                loadGallery(false);
+            }
+        }
+    });
 
     // Select an image from the gallery
     function selectImage(index) {
@@ -176,10 +188,56 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Open modal with enlarged image
     function openImageModal(filename) {
-        modalImage.src = `/camera/images/${filename}`;
+        // Find index by filename
+        const idx = allImages.findIndex(img => img.filename === filename);
+        if (idx !== -1) {
+            currentImageIndex = idx;
+        }
+        updateModalImage();
         imageModal.classList.add('active');
         document.body.style.overflow = 'hidden';
     }
+
+    function updateModalImage() {
+        if (allImages[currentImageIndex]) {
+            modalImage.src = `/camera/images/${allImages[currentImageIndex].filename}`;
+        }
+        // Enable/disable arrows
+        modalPrev.disabled = (currentImageIndex <= 0);
+        modalNext.disabled = (currentImageIndex >= allImages.length - 1);
+    }
+    // Modal arrow navigation
+    modalPrev.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentImageIndex > 0) {
+            currentImageIndex--;
+            updateModalImage();
+        }
+    });
+    modalNext.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentImageIndex < allImages.length - 1) {
+            currentImageIndex++;
+            updateModalImage();
+        }
+    });
+
+    // Keyboard arrow navigation
+    document.addEventListener('keydown', (event) => {
+        if (imageModal.classList.contains('active')) {
+            if (event.key === 'ArrowLeft') {
+                if (currentImageIndex > 0) {
+                    currentImageIndex--;
+                    updateModalImage();
+                }
+            } else if (event.key === 'ArrowRight') {
+                if (currentImageIndex < allImages.length - 1) {
+                    currentImageIndex++;
+                    updateModalImage();
+                }
+            }
+        }
+    });
 
     // Close modal
     function closeImageModal() {
@@ -266,7 +324,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize on page load
     displayLatestImage();
-    loadGallery();
+    loadGallery(true);
     loadSensorData();
 
     // Update sensor data every 2 seconds

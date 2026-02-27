@@ -530,4 +530,21 @@ if __name__ == '__main__':
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         init_serial()
         threading.Thread(target=read_serial, daemon=True).start()
+        # Send correct device states based on active triggers
+        with app.app_context():
+            triggers = calculate_and_log_triggers()
+            # Determine fan and valve commands from triggers
+            fan_speed = 0
+            valve_open = False
+            for t in triggers:
+                if t['name'] == 'Air Temp Cooldown' and t['active']:
+                    # Fan scales to 100% from 80-85°F
+                    fan_speed = 255
+                elif t['name'] == 'High Humidity Control' and t['active']:
+                    # Fan runs at 50% minimum
+                    fan_speed = max(fan_speed, 128)
+                elif t['name'] == 'Water Valve Monitor' and t['active']:
+                    valve_open = True
+            send_command(f"F:{fan_speed}")
+            send_command("W1" if valve_open else "W0")
     app.run(debug=True, host='0.0.0.0')

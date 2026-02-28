@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('/api/data')
             .then(response => response.json())
             .then(data => {
-                document.getElementById('statTemp').textContent = data.temp_f ? data.temp_f.toFixed(1) + '°F' : '--';
+                document.getElementById('statTemp').innerHTML = data.temp_f ? data.temp_f.toFixed(1) + '&deg;F' : '--';
                 document.getElementById('statHumidity').textContent = data.humidity ? data.humidity.toFixed(1) + '%' : '--';
                 document.getElementById('statSoilA').textContent = data.hydrometer_a ? data.hydrometer_a.toFixed(1) + '%' : '--';
                 document.getElementById('statSoilB').textContent = data.hydrometer_b ? data.hydrometer_b.toFixed(1) + '%' : '--';

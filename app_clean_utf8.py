@@ -243,7 +243,7 @@ def capture_and_overlay_image(trigger_event=None, trigger_name=None):
         overlay_text = [f"Timestamp: {timestamp_str}", ""]
         if latest_data:
             overlay_text.extend([
-                f"Temperature: {latest_data.temp_f:.1f}Â°F",
+                f"Temperature: {latest_data.temp_f:.1f}°F",
                 f"Humidity: {latest_data.humidity:.1f}%",
                 f"Soil A: {latest_data.hydrometer_a:.1f}%",
                 f"Soil B: {latest_data.hydrometer_b:.1f}%",
@@ -505,9 +505,9 @@ def calculate_and_log_triggers():
         # Define triggers
         triggers.append({
             'name': 'Air Temp Cooldown',
-            'description': 'If temp > 80Â°F, fan speed scales to 100% from 80-85Â°F',
+            'description': 'If temp > 80°F, fan speed scales to 100% from 80-85°F',
             'active': temp > 80,
-            'details': f'Current temp: {temp}Â°F'
+            'details': f'Current temp: {temp}°F'
         })
         triggers.append({
             'name': 'High Humidity Control',
@@ -589,7 +589,7 @@ if __name__ == '__main__':
             valve_open = False
             for t in current_triggers:
                 if t['name'] == 'Air Temp Cooldown' and t['active']:
-                    # Fan scales to 100% from 80-85Â°F
+                    # Fan scales to 100% from 80-85°F
                     fan_speed = 255
                 elif t['name'] == 'High Humidity Control' and t['active']:
                     # Fan runs at 50% minimum

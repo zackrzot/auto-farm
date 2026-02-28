@@ -15,7 +15,7 @@ function initChart() {
             labels: [],
             datasets: [
                 {
-                    label: 'Temperature (°F)',
+                    label: 'Temperature (\u00B0F)',
                     data: [],
                     borderColor: '#dc3545',
                     backgroundColor: 'rgba(220, 53, 69, 0.05)',

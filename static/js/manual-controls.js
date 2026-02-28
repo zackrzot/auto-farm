@@ -1,55 +1,59 @@
 // manual-controls.js
 
-function triggerDevice(device, action) {
-    let command;
-    switch (device) {
-        case 'valve':
-            command = (action === 'open') ? 'W1' : 'W0';
-            break;
-        case 'fan':
-            // Prompt user for speed value (0-255)
-            let speed = 255;
-            if (action === 'set') {
-                speed = prompt('Enter fan speed (0-255):', '128');
-                if (speed === null) return; // Cancelled
-                speed = parseInt(speed, 10);
-                if (isNaN(speed) || speed < 0 || speed > 255) {
-                    alert('Invalid speed. Enter a value between 0 and 255.');
-                    return;
-                }
-            } else {
-                speed = (action === 'on') ? 255 : 0;
-            }
-            command = `F:${speed}`;
-            break;
-        // No lights control implemented
-        case 'auto':
-            // Release manual control, return to auto mode
-            command = 'A';
-            break;
-        default:
-            alert('Unknown device');
-            return;
-    }
+function showToast(message, ok) {
+    const el = document.getElementById('cmd-toast');
+    if (!el) return;
+    el.className = 'alert mb-3 ' + (ok ? 'alert-success' : 'alert-danger');
+    el.textContent = message;
+    el.classList.remove('d-none');
+    clearTimeout(el._hideTimer);
+    el._hideTimer = setTimeout(() => el.classList.add('d-none'), 3000);
+}
+
+function sendCommand(command) {
     fetch('/api/control', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command })
     })
-    .then(response => response.json())
+    .then(r => r.json())
     .then(data => {
         if (data.status === 'ok') {
-            updateStatus(device, action);
+            showToast('Sent: ' + command, true);
         } else {
-            alert('Failed to send command');
+            showToast('Error sending: ' + command, false);
         }
     })
-    .catch(() => alert('Error sending command'));
+    .catch(() => showToast('Network error sending: ' + command, false));
 }
 
-function updateStatus(device, action) {
-    const statusSpan = document.getElementById(device + '-status');
-    if (statusSpan) {
-        statusSpan.textContent = 'Status: ' + (action.charAt(0).toUpperCase() + action.slice(1));
+function sendFanCustom() {
+    const val = parseInt(document.getElementById('fan-custom-val').value, 10);
+    if (isNaN(val) || val < 0 || val > 255) {
+        showToast('Invalid speed. Enter a value between 0 and 255.', false);
+        return;
     }
+    sendCommand('F:' + val);
+}
+
+function resetToTriggers() {
+    fetch('/api/control/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            const valve = data.valve_open ? 'Open (W1)' : 'Closed (W0)';
+            const fan   = 'F:' + data.fan_speed;
+            const active = (data.triggers || [])
+                .filter(t => t.active)
+                .map(t => t.name)
+                .join(', ') || 'none';
+            showToast(`Reset applied — Fan: ${fan}, Valve: ${valve}. Active triggers: ${active}`, true);
+        } else {
+            showToast('Reset failed: ' + (data.message || 'unknown error'), false);
+        }
+    })
+    .catch(() => showToast('Network error during reset', false));
 }

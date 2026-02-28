@@ -30,7 +30,7 @@ function initChart() {
             labels: chartData.labels,
             datasets: [
                 {
-                    label: 'Temperature (°F)',
+                    label: 'Temperature (\u00B0F)',
                     data: chartData.temps,
                     borderColor: 'rgb(220, 53, 69)',
                     backgroundColor: 'transparent',

@@ -6,7 +6,6 @@
     <title>auto-farm - Manual Control</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="/static/js/manual-controls.js"></script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-2">
@@ -27,36 +26,56 @@
             </div>
         </div>
     </nav>
+
     <div class="container py-4">
-        <h2 class="mb-4">Manual Trigger Controls</h2>
-        <div class="mb-4 text-center">
-            <button class="btn btn-warning" onclick="triggerDevice('auto', 'release')">Release Manual Control (Auto Mode)</button>
+        <h2 class="mb-1">Manual Control</h2>
+        <p class="text-muted mb-4">Each button sends a single command directly to the device.</p>
+
+        <div id="cmd-toast" class="alert d-none mb-3" role="alert"></div>
+
+        <!-- Water Valve -->
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">Water Valve</div>
+            <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+                <button class="btn btn-success" onclick="sendCommand('W1')">W1 &mdash; Open Valve</button>
+                <button class="btn btn-danger"  onclick="sendCommand('W0')">W0 &mdash; Close Valve</button>
+                <span class="ms-auto text-muted small" id="status-valve"></span>
+            </div>
         </div>
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="card h-100">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Water Valve</h5>
-                        <button class="btn btn-success m-1" onclick="triggerDevice('valve', 'open')">Open Valve</button>
-                        <button class="btn btn-danger m-1" onclick="triggerDevice('valve', 'close')">Close Valve</button>
-                        <div class="mt-2"><span id="valve-status" class="badge bg-secondary">Status: Unknown</span></div>
-                    </div>
+
+        <!-- Fan -->
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">Fan</div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                    <button class="btn btn-danger"  onclick="sendCommand('F:0')">F:0 &mdash; Off</button>
+                    <button class="btn btn-warning" onclick="sendCommand('F:64')">F:64 &mdash; 25%</button>
+                    <button class="btn btn-warning" onclick="sendCommand('F:128')">F:128 &mdash; 50%</button>
+                    <button class="btn btn-warning" onclick="sendCommand('F:192')">F:192 &mdash; 75%</button>
+                    <button class="btn btn-success" onclick="sendCommand('F:255')">F:255 &mdash; Full</button>
+                    <span class="ms-auto text-muted small" id="status-fan"></span>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <label class="text-muted small mb-0">Custom speed (0&ndash;255):</label>
+                    <input type="number" id="fan-custom-val" class="form-control form-control-sm" style="width:90px" min="0" max="255" value="128">
+                    <button class="btn btn-primary btn-sm" onclick="sendFanCustom()">Send F:&lt;N&gt;</button>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card h-100">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Fan</h5>
-                        <button class="btn btn-success m-1" onclick="triggerDevice('fan', 'on')">Turn Fan On (Full)</button>
-                        <button class="btn btn-danger m-1" onclick="triggerDevice('fan', 'off')">Turn Fan Off</button>
-                        <button class="btn btn-primary m-1" onclick="triggerDevice('fan', 'set')">Set Fan Speed</button>
-                        <div class="mt-2"><span id="fan-status" class="badge bg-secondary">Status: Unknown</span></div>
-                    </div>
-                </div>
-            </div>
-            <!-- Lights control removed: no hardware implemented -->
         </div>
+
+        <!-- Auto / Reset -->
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">Auto Mode</div>
+            <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+                <button class="btn btn-secondary" onclick="sendCommand('A')">A &mdash; Release to Auto</button>
+                <button class="btn btn-dark"      onclick="resetToTriggers()">Reset &mdash; Apply Current Trigger State</button>
+                <span class="ms-auto text-muted small" id="status-auto"></span>
+            </div>
+        </div>
+
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/manual-controls.js"></script>
 </body>
 </html>

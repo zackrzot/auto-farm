@@ -17,6 +17,56 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
+# API endpoint: Database info for TV page
+@app.route('/api/dbinfo')
+def api_dbinfo():
+    record_count = SensorData.query.count()
+    db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+    try:
+        db_size = os.path.getsize(db_path)
+    except Exception:
+        db_size = None
+    size_str = f"{db_size/1024/1024:.2f} MB" if db_size else '--'
+    return jsonify({
+        'records': record_count,
+        'size': size_str
+    })
+
+# API endpoint: Live chart data for TV page
+@app.route('/api/chart/live')
+def api_chart_live():
+    data = SensorData.query.order_by(SensorData.timestamp.desc()).limit(60).all()
+    data = data[::-1]
+    result = [
+        {
+            'timestamp': d.timestamp.isoformat(),
+            'temp_f': d.temp_f,
+            'humidity': d.humidity,
+            'fan_signal': d.fan_signal,
+            'hydrometer_a': d.hydrometer_a,
+            'hydrometer_b': d.hydrometer_b
+        } for d in data
+    ]
+    return jsonify(result)
+from flask import Flask, render_template, request, jsonify, send_file
+import serial
+import threading
+import time
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from models import db, SensorData, TriggerLog
+from config import get_accurate_time
+import argparse
+import os
+import atexit
+import cv2
+from PIL import Image, ImageDraw, ImageFont
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
+
 # Serial setup
 SERIAL_PORT = 'COM5'  # Default, can be overridden with --port argument
 BAUD_RATE = 9600
@@ -208,12 +258,10 @@ def capture_and_overlay_image(trigger_event=None, trigger_name=None):
                 "Fan: --"
             ])
         # Add trigger event info if provided
-        if trigger_name or trigger_event:
+        if trigger_event and trigger_name:
             overlay_text.append("")
-            if trigger_name:
-                overlay_text.append(f"Trigger: {trigger_name}")
-            if trigger_event:
-                overlay_text.append(f"Event: {trigger_event}")
+            overlay_text.append(f"Trigger: {trigger_name}")
+            overlay_text.append(f"Event: {trigger_event}")
         # Draw semi-transparent background and text
         y_offset = 20
         for text in overlay_text:
@@ -230,25 +278,14 @@ def capture_and_overlay_image(trigger_event=None, trigger_name=None):
 def capture_camera():
     """Capture image from webcam with overlay and save to disk"""
     try:
-        data = request.get_json(silent=True) or {}
-        trigger_event = data.get('trigger_event')
-        trigger_name = data.get('trigger_name')
-        
-        result = capture_and_overlay_image(trigger_event=trigger_event, trigger_name=trigger_name)
+        result = capture_and_overlay_image()
         if result is None:
             return jsonify({'error': 'Could not capture image from webcam'}), 400
-
+        
         img, timestamp = result
-
+        
         # Save image
-        label_part = ""
-        if trigger_name or trigger_event:
-            name_str = trigger_name.replace(' ', '_') if trigger_name else ''
-            event_str = trigger_event.replace(' ', '_') if trigger_event else ''
-            label_part = f"_{name_str}_{event_str}".strip('_')
-            if label_part:
-                label_part = f"_{label_part}"
-        filename = timestamp.strftime("%Y%m%d_%H%M%S") + f"{label_part}.jpg"
+        filename = timestamp.strftime("%Y%m%d_%H%M%S") + ".jpg"
         filepath = os.path.join(CAMERA_FOLDER, filename)
         img.save(filepath)
         

@@ -43,6 +43,50 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
+    // --- Next watering countdown ---
+    let nextWaterMs = null;
+    let scheduleEnabled = true;
+
+    function loadWateringSchedule() {
+        fetch('/api/watering/schedule')
+            .then(r => r.json())
+            .then(data => {
+                scheduleEnabled = data.enabled;
+                if (!scheduleEnabled) {
+                    nextWaterMs = null;
+                    return;
+                }
+                if (data.last_watered) {
+                    nextWaterMs = new Date(data.last_watered).getTime() + data.interval_hours * 3600 * 1000;
+                } else {
+                    nextWaterMs = null;
+                }
+            })
+            .catch(() => {});
+    }
+
+    function updateWateringCountdown() {
+        const el = document.getElementById('next-water-countdown');
+        if (!el) return;
+        if (!scheduleEnabled) { el.textContent = 'Disabled'; return; }
+        if (nextWaterMs === null) { el.textContent = 'Not yet watered'; return; }
+        const remaining = nextWaterMs - Date.now();
+        if (remaining <= 0) {
+            el.textContent = 'Any moment now';
+            return;
+        }
+        const totalSec = Math.floor(remaining / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        el.textContent = (h > 0 ? h + 'h ' : '') + (h > 0 || m > 0 ? m + 'm ' : '') + s + 's';
+    }
+
+    loadWateringSchedule();
+    setInterval(loadWateringSchedule, 60000);
+    setInterval(updateWateringCountdown, 1000);
+    // ---
+
     setInterval(updateData, 1000);
     updateData();
 

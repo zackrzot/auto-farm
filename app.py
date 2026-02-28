@@ -218,6 +218,19 @@ def send_command(cmd):
         ser.write((cmd + '\n').encode())
 
 
+def _save_watering_image(label, triggered_by):
+    """Capture and save a single watering before/after image. Must be called inside an app context."""
+    try:
+        result = capture_and_overlay_image(trigger_event=label, trigger_name=f'Watering ({triggered_by})')
+        if result is not None:
+            img, ts = result
+            filename = ts.strftime("%Y%m%d_%H%M%S") + f"_Watering_{triggered_by}_{label}.jpg"
+            img.save(os.path.join(CAMERA_FOLDER, filename))
+            print(f'[Watering] Saved {label} image: {filename}')
+    except Exception as e:
+        print(f'[Watering] Could not save {label} image: {e}')
+
+
 def run_watering_cycle(duration_seconds, triggered_by='schedule'):
     """Open the valve for duration_seconds then guarantee it is closed. Thread-safe."""
     if not _watering_lock.acquire(blocking=False):
@@ -225,6 +238,9 @@ def run_watering_cycle(duration_seconds, triggered_by='schedule'):
         return False
     try:
         print(f'[Watering] Opening valve for {duration_seconds}s (triggered by: {triggered_by})')
+        # Capture before image
+        with app.app_context():
+            _save_watering_image('before', triggered_by)
         send_command('W1')
         time.sleep(duration_seconds)
         # Send W0 twice with a short gap to guarantee the valve closes
@@ -233,6 +249,8 @@ def run_watering_cycle(duration_seconds, triggered_by='schedule'):
         send_command('W0')
         print('[Watering] Valve closed.')
         with app.app_context():
+            # Capture after image
+            _save_watering_image('after', triggered_by)
             log = WateringLog(
                 timestamp=get_accurate_time(),
                 duration_seconds=duration_seconds,

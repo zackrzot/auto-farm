@@ -1,0 +1,139 @@
+#include <AM2302-Sensor.h>
+
+constexpr unsigned int SENSOR_PIN {18};
+AM2302::AM2302_Sensor am2302{SENSOR_PIN};
+
+// Pin definitions
+const int valve_led_pin = 5;
+const int valve_relay_pin = 4;
+const int fan_pwm_pin = 3;
+const int fan_relay_pin = 2;
+const int hydrometer_a_in_pin = A0;
+const int hydrometer_b_in_pin = A1;
+
+// Sensor readings
+double hydrometer_a = 0.0;
+double hydrometer_b = 0.0;
+double temp_f = 0.0;
+double humidity = 0.0;
+double fan_signal = 0.0;
+
+// Control state
+int print_count = 0;
+int sensor_read_count = 0;
+constexpr int SENSOR_READ_INTERVAL = 15; // Read AM2302 every 15 * 200ms = 3 seconds (min 2s required)
+bool sensor_ready = false;  // Only send serial data after first successful AM2302 read
+
+// Valve safety timeout — force-close if left open longer than this
+constexpr unsigned long VALVE_SAFETY_TIMEOUT_MS = 30000UL; // 30 seconds
+bool valve_is_open = false;
+unsigned long valve_opened_at_ms = 0;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(fan_relay_pin, OUTPUT);
+  pinMode(fan_pwm_pin, OUTPUT); 
+  pinMode(valve_led_pin, OUTPUT);
+  pinMode(valve_relay_pin, OUTPUT); 
+
+  // Valve OFF, Fan OFF
+  digitalWrite(valve_led_pin, LOW);
+  digitalWrite(valve_relay_pin, LOW);
+  digitalWrite(fan_relay_pin, LOW);
+  analogWrite(fan_pwm_pin, 0);
+
+  // AM2302 warmup: sensor requires ~1s after power-on before it will respond
+  delay(2000);
+}
+
+void loop() {
+  // Read hydrometer A
+  hydrometer_a = analogRead(hydrometer_a_in_pin);
+  hydrometer_a = constrain(hydrometer_a, 400, 1023);
+  hydrometer_a = map(hydrometer_a, 400, 1023, 100, 0);
+
+  // Read hydrometer B
+  hydrometer_b = analogRead(hydrometer_b_in_pin);
+  hydrometer_b = constrain(hydrometer_b, 400, 1023);
+  hydrometer_b = map(hydrometer_b, 400, 1023, 100, 0);
+  
+  // Read temperature and humidity (AM2302 requires >= 2s between reads)
+  sensor_read_count++;
+  if (sensor_read_count >= SENSOR_READ_INTERVAL) {
+    sensor_read_count = 0;
+    auto status = am2302.read();
+    if (status == 0) {  // 0 = AM2302_READ_OK
+      double temp_c = am2302.get_Temperature();
+      double new_humidity = am2302.get_Humidity();
+      // Sanity-check: reject implausible values
+      if (!isnan(temp_c) && !isnan(new_humidity) && new_humidity >= 0.0 && new_humidity <= 100.0) {
+        temp_f = (temp_c * 9.0 / 5.0) + 32.0;
+        humidity = new_humidity;
+        sensor_ready = true;
+      }
+    }
+  }
+
+  // Handle serial commands from Flask
+  if (Serial.available() > 0) {
+    String command = Serial.readStringUntil('\n');
+    command.trim();
+    
+    // Water valve control
+    if (command == "W1") {
+      digitalWrite(valve_led_pin, HIGH);
+      digitalWrite(valve_relay_pin, HIGH);
+      valve_is_open = true;
+      valve_opened_at_ms = millis();
+    } 
+    else if (command == "W0") {
+      digitalWrite(valve_led_pin, LOW);
+      digitalWrite(valve_relay_pin, LOW);
+      valve_is_open = false;
+      valve_opened_at_ms = 0;
+    } 
+    // Fan speed control (0-255)
+    else if (command.startsWith("F:")) {
+      String speed_str = command.substring(2);
+      double fan_speed = speed_str.toDouble();
+      fan_speed = constrain(fan_speed, 0, 255);
+      fan_signal = fan_speed;
+      
+      analogWrite(fan_pwm_pin, (int)fan_speed);
+      
+      // Relay logic: enable relay when speed > 0
+      if (fan_speed > 0) {
+        digitalWrite(fan_relay_pin, HIGH);
+      } else {
+        digitalWrite(fan_relay_pin, LOW);
+      }
+    }
+  }
+
+  // Valve safety timeout: force-close if open too long
+  if (valve_is_open && (millis() - valve_opened_at_ms) >= VALVE_SAFETY_TIMEOUT_MS) {
+    digitalWrite(valve_led_pin, LOW);
+    digitalWrite(valve_relay_pin, LOW);
+    valve_is_open = false;
+    valve_opened_at_ms = 0;
+  }
+
+  // Send sensor data every ~1 second (6 * 200ms = 1.2s)
+  // Do NOT send until we have had at least one successful AM2302 read
+  if (sensor_ready && print_count >= 6) {
+    Serial.print(temp_f);
+    Serial.print(", ");
+    Serial.print(fan_signal);
+    Serial.print(", ");
+    Serial.print(hydrometer_a);
+    Serial.print(", ");
+    Serial.print(hydrometer_b);
+    Serial.print(", ");
+    Serial.println(humidity);
+    
+    print_count = 0;
+  }
+  
+  print_count++;
+  delay(200);
+}

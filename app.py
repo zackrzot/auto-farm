@@ -1,19 +1,16 @@
 from flask import Flask, render_template, request, jsonify, send_file
 import serial
-from serial import SerialException
 import threading
 import time
-from datetime import datetime, date
+from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from models import db, SensorData, TriggerLog
 from config import get_accurate_time
-import json
 import argparse
 import os
 import atexit
 import cv2
 from PIL import Image, ImageDraw, ImageFont
-import io
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
@@ -50,27 +47,25 @@ def init_serial():
         ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
         print(f"Connected to {SERIAL_PORT} at {BAUD_RATE} baud")
         atexit.register(close_serial)
-    except PermissionError as e:
+    except PermissionError:
         print(f"\nPERMISSION DENIED on {SERIAL_PORT}")
-        print(f"   Possible causes:")
-        print(f"   1. Another application is using this port (close Arduino IDE, etc.)")
-        print(f"   2. Port is locked - try unplugging USB and plugging back in")
-        print(f"   3. Need to run as Administrator")
+        print("   Possible causes:")
+        print("   1. Another application is using this port (close Arduino IDE, etc.)")
+        print("   2. Port is locked - try unplugging USB and plugging back in")
+        print("   3. Need to run as Administrator")
         print(f"   Run this to check ports: python serial_diagnostic.py {SERIAL_PORT}\n")
     except serial.SerialException as e:
         print(f"Serial Error: {e}")
-        print(f"   Run this to see available ports: python find_arduino.py")
+        print("   Run this to see available ports: python find_arduino.py")
     except Exception as e:
         print(f"Failed to connect to {SERIAL_PORT}: {type(e).__name__}: {e}")
 
 def close_serial():
-    global ser
     if ser and ser.is_open:
         ser.close()
         print("Serial connection closed.")
 
 def read_serial():
-    global ser
     while True:
         if ser and ser.is_open:
             try:
@@ -532,11 +527,11 @@ if __name__ == '__main__':
         threading.Thread(target=read_serial, daemon=True).start()
         # Send correct device states based on active triggers
         with app.app_context():
-            triggers = calculate_and_log_triggers()
+            current_triggers = calculate_and_log_triggers()
             # Determine fan and valve commands from triggers
             fan_speed = 0
             valve_open = False
-            for t in triggers:
+            for t in current_triggers:
                 if t['name'] == 'Air Temp Cooldown' and t['active']:
                     # Fan scales to 100% from 80-85°F
                     fan_speed = 255

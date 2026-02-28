@@ -5,7 +5,6 @@ Helps identify which camera index to use for the auto-farm system
 """
 
 import cv2
-import sys
 
 def find_available_webcams():
     """Scan for available webcam devices"""

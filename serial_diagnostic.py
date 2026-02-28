@@ -4,7 +4,6 @@ Use this to troubleshoot COM port problems.
 """
 import serial
 import serial.tools.list_ports
-import sys
 from serial import SerialException
 
 def check_ports():

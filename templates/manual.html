@@ -73,6 +73,41 @@
             </div>
         </div>
 
+        <!-- Watering Schedule -->
+        <div class="card mb-3">
+            <div class="card-header fw-semibold d-flex align-items-center gap-2">
+                Watering Schedule
+                <span id="schedule-badge" class="badge bg-secondary ms-1">Loading…</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 align-items-end mb-3">
+                    <div class="col-auto">
+                        <label class="form-label mb-1 small text-muted">Duration (seconds)</label>
+                        <input type="number" id="sched-duration" class="form-control form-control-sm" style="width:110px" min="0.5" max="60" step="0.5" value="2">
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label mb-1 small text-muted">Interval (hours)</label>
+                        <input type="number" id="sched-interval" class="form-control form-control-sm" style="width:110px" min="0.1" max="168" step="0.5" value="8">
+                    </div>
+                    <div class="col-auto d-flex align-items-end gap-2">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="sched-enabled" checked>
+                            <label class="form-check-label small" for="sched-enabled">Enabled</label>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="saveSchedule()">Save</button>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-success btn-sm" onclick="waterNow()">Water Now</button>
+                    </div>
+                </div>
+                <div class="text-muted small mb-2" id="sched-status"></div>
+                <table class="table table-sm table-striped mb-0" id="watering-log-table" style="display:none">
+                    <thead><tr><th>Time</th><th>Duration</th><th>Source</th></tr></thead>
+                    <tbody id="watering-log-body"></tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

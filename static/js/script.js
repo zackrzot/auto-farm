@@ -3,11 +3,11 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('/api/data')
             .then(response => response.json())
             .then(data => {
-                document.getElementById('temp').textContent = data.temp_f || '--';
-                document.getElementById('humidity').textContent = data.humidity || '--';
-                document.getElementById('hyd_a').textContent = (typeof data.hydrometer_a === 'number') ? Math.round(data.hydrometer_a) : (data.hydrometer_a || '--');
-                document.getElementById('hyd_b').textContent = (typeof data.hydrometer_b === 'number') ? Math.round(data.hydrometer_b) : (data.hydrometer_b || '--');
-                document.getElementById('fan').textContent = (typeof data.fan_signal === 'number') ? Math.round(data.fan_signal) : (data.fan_signal || '--');
+                document.getElementById('temp').textContent     = (typeof data.temp_f    === 'number') ? data.temp_f.toFixed(1)    : '--';
+                document.getElementById('humidity').textContent = (typeof data.humidity   === 'number') ? data.humidity.toFixed(1)  : '--';
+                document.getElementById('hyd_a').textContent    = (typeof data.hydrometer_a === 'number') ? Math.round(data.hydrometer_a) : (data.hydrometer_a || '--');
+                document.getElementById('hyd_b').textContent    = (typeof data.hydrometer_b === 'number') ? Math.round(data.hydrometer_b) : (data.hydrometer_b || '--');
+                document.getElementById('fan').textContent      = (typeof data.fan_signal === 'number') ? Math.round(data.fan_signal) : (data.fan_signal || '--');
             });
     }
 

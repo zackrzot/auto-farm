@@ -29,10 +29,6 @@ TARGET_TEMP_F = 80.0        # Target temperature in Fahrenheit
 TARGET_HUMIDITY = 75.0      # Target humidity percentage
 MIN_WATER_TEMP = 70.0       # Minimum temperature to allow watering
 
-# Watering Control
-VALVE_ON_MOISTURE = 75.0    # Soil moisture % to trigger watering
-VALVE_OFF_MOISTURE = 99.0   # Soil moisture % to stop watering
-
 # Fan Control
 TEMP_RANGE = 5.0            # Temperature range above target for fan control
 HUMIDITY_RANGE = 15.0       # Humidity range above target for fan control

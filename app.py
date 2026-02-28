@@ -2,9 +2,10 @@
 import serial
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
+import math
 from dateutil.relativedelta import relativedelta
-from models import db, SensorData, TriggerLog
+from models import db, SensorData, TriggerLog, WateringSchedule, WateringLog
 from config import get_accurate_time
 import argparse
 import os
@@ -40,6 +41,7 @@ if args.camera_index is not None:
     CAMERA_INDEX = args.camera_index
     print(f"Using camera index: {CAMERA_INDEX}")
 ser = None
+_watering_lock = threading.Lock()
 
 def init_serial():
     global ser
@@ -67,7 +69,6 @@ def close_serial():
 
 def read_serial():
     last_fan_speed = None
-    last_valve_open = None
     while True:
         if ser and ser.is_open:
             try:
@@ -75,11 +76,29 @@ def read_serial():
                 if line:
                     parts = line.split(', ')
                     if len(parts) == 5:
-                        temp_f = float(parts[0])
-                        fan_signal = float(parts[1])
-                        hydrometer_a = float(parts[2])
-                        hydrometer_b = float(parts[3])
-                        humidity = float(parts[4])
+                        try:
+                            temp_f = float(parts[0])
+                            fan_signal = float(parts[1])
+                            hydrometer_a = float(parts[2])
+                            hydrometer_b = float(parts[3])
+                            humidity = float(parts[4])
+                        except ValueError:
+                            print(f"[Serial] Could not parse line: {repr(line)}")
+                            continue
+                        # Reject NaN or physically impossible sensor values
+                        if math.isnan(temp_f) or math.isnan(humidity):
+                            print(f"[Serial] NaN in sensor data, skipping: {repr(line)}")
+                            continue
+                        if not (-40 <= temp_f <= 200):
+                            print(f"[Serial] Implausible temp {temp_f}°F, skipping")
+                            continue
+                        if not (0 <= humidity <= 100):
+                            print(f"[Serial] Implausible humidity {humidity}%, skipping")
+                            continue
+                        # Reject frames where both temp and humidity are exactly 0 — sensor not yet initialized
+                        if temp_f == 0.0 and humidity == 0.0:
+                            print("[Serial] temp=0 humidity=0, sensor not ready, skipping")
+                            continue
                         timestamp = get_accurate_time()
                         data = SensorData(timestamp=timestamp, temp_f=temp_f, fan_signal=fan_signal,
                                         hydrometer_a=hydrometer_a, hydrometer_b=hydrometer_b, humidity=humidity)
@@ -89,20 +108,14 @@ def read_serial():
                             # Re-evaluate triggers and apply commands if state changed
                             current_triggers = calculate_and_log_triggers()
                             fan_speed = 0
-                            valve_open = False
                             for t in current_triggers:
                                 if t['name'] == 'Air Temp Cooldown' and t['active']:
                                     fan_speed = 255
                                 elif t['name'] == 'High Humidity Control' and t['active']:
                                     fan_speed = max(fan_speed, 128)
-                                elif t['name'] == 'Water Valve Monitor' and t['active']:
-                                    valve_open = True
                             if fan_speed != last_fan_speed:
                                 send_command(f"F:{fan_speed}")
                                 last_fan_speed = fan_speed
-                            if valve_open != last_valve_open:
-                                send_command("W1" if valve_open else "W0")
-                                last_valve_open = valve_open
             except Exception as e:
                 print(f"Error reading serial: {e}")
         time.sleep(0.1)
@@ -184,20 +197,16 @@ def control_reset():
     try:
         current_triggers = calculate_and_log_triggers()
         fan_speed = 0
-        valve_open = False
         for t in current_triggers:
             if t['name'] == 'Air Temp Cooldown' and t['active']:
                 fan_speed = 255
             elif t['name'] == 'High Humidity Control' and t['active']:
                 fan_speed = max(fan_speed, 128)
-            elif t['name'] == 'Water Valve Monitor' and t['active']:
-                valve_open = True
         send_command(f"F:{fan_speed}")
-        send_command("W1" if valve_open else "W0")
+        send_command("W0")
         return jsonify({
             'status': 'ok',
             'fan_speed': fan_speed,
-            'valve_open': valve_open,
             'triggers': [{'name': t['name'], 'active': t['active']} for t in current_triggers]
         })
     except Exception as e:
@@ -207,6 +216,57 @@ def control_reset():
 def send_command(cmd):
     if ser and ser.is_open:
         ser.write((cmd + '\n').encode())
+
+
+def run_watering_cycle(duration_seconds, triggered_by='schedule'):
+    """Open the valve for duration_seconds then guarantee it is closed. Thread-safe."""
+    if not _watering_lock.acquire(blocking=False):
+        print('[Watering] Cycle already in progress, skipping.')
+        return False
+    try:
+        print(f'[Watering] Opening valve for {duration_seconds}s (triggered by: {triggered_by})')
+        send_command('W1')
+        time.sleep(duration_seconds)
+        # Send W0 twice with a short gap to guarantee the valve closes
+        send_command('W0')
+        time.sleep(0.2)
+        send_command('W0')
+        print('[Watering] Valve closed.')
+        with app.app_context():
+            log = WateringLog(
+                timestamp=get_accurate_time(),
+                duration_seconds=duration_seconds,
+                triggered_by=triggered_by
+            )
+            db.session.add(log)
+            schedule = WateringSchedule.query.first()
+            if schedule:
+                schedule.last_watered = get_accurate_time()
+            db.session.commit()
+        return True
+    except Exception as e:
+        print(f'[Watering] Error during cycle: {e}')
+        send_command('W0')  # Safety close on error
+        return False
+    finally:
+        _watering_lock.release()
+
+
+def watering_scheduler():
+    """Background thread: checks every 60 s whether it is time to water."""
+    time.sleep(30)  # Brief startup delay so serial has time to init
+    while True:
+        try:
+            with app.app_context():
+                schedule = WateringSchedule.query.first()
+                if schedule and schedule.enabled:
+                    now = get_accurate_time()
+                    interval_td = timedelta(hours=schedule.interval_hours)
+                    if schedule.last_watered is None or (now - schedule.last_watered) >= interval_td:
+                        run_watering_cycle(schedule.duration_seconds, triggered_by='schedule')
+        except Exception as e:
+            print(f'[Watering Scheduler] Error: {e}')
+        time.sleep(60)  # Check once per minute
 
 def capture_and_overlay_image(trigger_event=None, trigger_name=None):
     """Capture image from webcam and overlay sensor stats. Optionally overlay trigger event info."""
@@ -500,6 +560,59 @@ def get_db_info():
     except Exception as e:
         return jsonify({'error': str(e)})
 
+@app.route('/api/watering/schedule', methods=['GET'])
+def get_watering_schedule():
+    schedule = WateringSchedule.query.first()
+    if not schedule:
+        return jsonify({'enabled': True, 'duration_seconds': 2.0, 'interval_hours': 8.0, 'last_watered': None})
+    return jsonify({
+        'enabled': schedule.enabled,
+        'duration_seconds': schedule.duration_seconds,
+        'interval_hours': schedule.interval_hours,
+        'last_watered': schedule.last_watered.isoformat() if schedule.last_watered else None
+    })
+
+
+@app.route('/api/watering/schedule', methods=['POST'])
+def set_watering_schedule():
+    data = request.json
+    schedule = WateringSchedule.query.first()
+    if not schedule:
+        schedule = WateringSchedule()
+        db.session.add(schedule)
+    if 'enabled' in data:
+        schedule.enabled = bool(data['enabled'])
+    if 'duration_seconds' in data:
+        val = float(data['duration_seconds'])
+        if 0 < val <= 60:
+            schedule.duration_seconds = val
+    if 'interval_hours' in data:
+        val = float(data['interval_hours'])
+        if 0 < val <= 168:
+            schedule.interval_hours = val
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/watering/run', methods=['POST'])
+def run_watering_now():
+    """Immediately trigger one watering cycle using the current duration setting."""
+    schedule = WateringSchedule.query.first()
+    duration = schedule.duration_seconds if schedule else 2.0
+    threading.Thread(target=run_watering_cycle, args=(duration, 'manual'), daemon=True).start()
+    return jsonify({'status': 'ok', 'duration_seconds': duration})
+
+
+@app.route('/api/watering/log')
+def get_watering_log():
+    logs = WateringLog.query.order_by(WateringLog.timestamp.desc()).limit(20).all()
+    return jsonify([{
+        'timestamp': l.timestamp.isoformat(),
+        'duration_seconds': l.duration_seconds,
+        'triggered_by': l.triggered_by
+    } for l in logs])
+
+
 def calculate_and_log_triggers():
     """Calculate triggers from latest sensor data and log them to database"""
     latest = SensorData.query.order_by(SensorData.timestamp.desc()).first()
@@ -508,8 +621,6 @@ def calculate_and_log_triggers():
     if latest:
         temp = latest.temp_f
         humidity = latest.humidity
-        hyd_a = latest.hydrometer_a
-        hyd_b = latest.hydrometer_b
         fan = latest.fan_signal
         # Define triggers
         triggers.append({
@@ -523,26 +634,6 @@ def calculate_and_log_triggers():
             'description': 'If humidity > 80%, fan runs at 50% minimum',
             'active': humidity > 80,
             'details': f'Current humidity: {humidity}%'
-        })
-        triggers.append({
-            'name': 'Soil Moisture Low (A)',
-            'description': 'If soil moisture A < 30%, activate water valve',
-            'active': hyd_a < 30,
-            'details': f'Current soil moisture A: {hyd_a}%'
-        })
-        triggers.append({
-            'name': 'Soil Moisture Low (B)',
-            'description': 'If soil moisture B < 30%, activate water valve',
-            'active': hyd_b < 30,
-            'details': f'Current soil moisture B: {hyd_b}%'
-        })
-        # Water valve monitor trigger (example: valve is open if either soil moisture low trigger is active)
-        water_valve_active = (hyd_a < 30) or (hyd_b < 30)
-        triggers.append({
-            'name': 'Water Valve Monitor',
-            'description': 'Water valve is open if soil moisture low triggers are active',
-            'active': water_valve_active,
-            'details': f"Water valve status: {'Open' if water_valve_active else 'Closed'}"
         })
         triggers.append({
             'name': 'Fan Status Monitor',
@@ -587,15 +678,19 @@ def get_triggers():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        # Seed default watering schedule if none exists
+        if not WateringSchedule.query.first():
+            db.session.add(WateringSchedule(enabled=True, duration_seconds=2.0, interval_hours=8.0))
+            db.session.commit()
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         init_serial()
         threading.Thread(target=read_serial, daemon=True).start()
+        threading.Thread(target=watering_scheduler, daemon=True).start()
         # Send correct device states based on active triggers
         with app.app_context():
             current_triggers = calculate_and_log_triggers()
-            # Determine fan and valve commands from triggers
+            # Determine fan commands from triggers
             fan_speed = 0
-            valve_open = False
             for t in current_triggers:
                 if t['name'] == 'Air Temp Cooldown' and t['active']:
                     # Fan scales to 100% from 80-85°F
@@ -603,8 +698,6 @@ if __name__ == '__main__':
                 elif t['name'] == 'High Humidity Control' and t['active']:
                     # Fan runs at 50% minimum
                     fan_speed = max(fan_speed, 128)
-                elif t['name'] == 'Water Valve Monitor' and t['active']:
-                    valve_open = True
             send_command(f"F:{fan_speed}")
-            send_command("W1" if valve_open else "W0")
+            send_command("W0")  # Valve defaults closed; control separately
     app.run(debug=True, host='0.0.0.0')

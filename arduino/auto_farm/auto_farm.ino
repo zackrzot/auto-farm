@@ -20,6 +20,14 @@ double fan_signal = 0.0;
 
 // Control state
 int print_count = 0;
+int sensor_read_count = 0;
+constexpr int SENSOR_READ_INTERVAL = 15; // Read AM2302 every 15 * 200ms = 3 seconds (min 2s required)
+bool sensor_ready = false;  // Only send serial data after first successful AM2302 read
+
+// Valve safety timeout — force-close if left open longer than this
+constexpr unsigned long VALVE_SAFETY_TIMEOUT_MS = 30000UL; // 30 seconds
+bool valve_is_open = false;
+unsigned long valve_opened_at_ms = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -33,6 +41,10 @@ void setup() {
   digitalWrite(valve_relay_pin, LOW);
   digitalWrite(fan_relay_pin, LOW);
   analogWrite(fan_pwm_pin, 0);
+
+  // AM2302 warmup: sensor requires ~1s after power-on before it will respond
+  delay(2000);
+  am2302.begin();
 }
 
 void loop() {
@@ -46,11 +58,22 @@ void loop() {
   hydrometer_b = constrain(hydrometer_b, 400, 1023);
   hydrometer_b = map(hydrometer_b, 400, 1023, 100, 0);
   
-  // Read temperature and humidity
-  auto status = am2302.read();
-  double temp_c = am2302.get_Temperature();
-  temp_f = (temp_c * 9.0 / 5.0) + 32.0;
-  humidity = am2302.get_Humidity();
+  // Read temperature and humidity (AM2302 requires >= 2s between reads)
+  sensor_read_count++;
+  if (sensor_read_count >= SENSOR_READ_INTERVAL) {
+    sensor_read_count = 0;
+    auto status = am2302.read();
+    if (status == 0) {  // 0 = AM2302_READ_OK
+      double temp_c = am2302.get_Temperature();
+      double new_humidity = am2302.get_Humidity();
+      // Sanity-check: reject implausible values
+      if (!isnan(temp_c) && !isnan(new_humidity) && new_humidity >= 0.0 && new_humidity <= 100.0) {
+        temp_f = (temp_c * 9.0 / 5.0) + 32.0;
+        humidity = new_humidity;
+        sensor_ready = true;
+      }
+    }
+  }
 
   // Handle serial commands from Flask
   if (Serial.available() > 0) {
@@ -61,10 +84,14 @@ void loop() {
     if (command == "W1") {
       digitalWrite(valve_led_pin, HIGH);
       digitalWrite(valve_relay_pin, HIGH);
+      valve_is_open = true;
+      valve_opened_at_ms = millis();
     } 
     else if (command == "W0") {
       digitalWrite(valve_led_pin, LOW);
       digitalWrite(valve_relay_pin, LOW);
+      valve_is_open = false;
+      valve_opened_at_ms = 0;
     } 
     // Fan speed control (0-255)
     else if (command.startsWith("F:")) {
@@ -86,8 +113,17 @@ void loop() {
     }
   }
 
+  // Valve safety timeout: force-close if open too long
+  if (valve_is_open && (millis() - valve_opened_at_ms) >= VALVE_SAFETY_TIMEOUT_MS) {
+    digitalWrite(valve_led_pin, LOW);
+    digitalWrite(valve_relay_pin, LOW);
+    valve_is_open = false;
+    valve_opened_at_ms = 0;
+  }
+
   // Send sensor data every ~1 second (6 * 200ms = 1.2s)
-  if (print_count >= 6) {
+  // Do NOT send until we have had at least one successful AM2302 read
+  if (sensor_ready && print_count >= 6) {
     Serial.print(temp_f);
     Serial.print(", ");
     Serial.print(fan_signal);

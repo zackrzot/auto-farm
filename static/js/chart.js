@@ -138,8 +138,8 @@ function updateLiveChart(data) {
     chartData.fans.push(parseFloat(data.fan_signal) || 0);
     chartData.hydrometer_a.push(parseFloat(data.hydrometer_a) || 0);
     chartData.hydrometer_b.push(parseFloat(data.hydrometer_b) || 0);
-    // Water valve: 1 if either soil moisture low, else 0
-    chartData.water_valve.push(((parseFloat(data.hydrometer_a) < 30) || (parseFloat(data.hydrometer_b) < 30)) ? 1 : 0);
+    // Water valve state is not moisture-driven; placeholder until redefined
+    chartData.water_valve.push(0);
     // Keep only last 60 points
     const maxPoints = 60;
     if (chartData.labels.length > maxPoints) {

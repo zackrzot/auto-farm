@@ -66,6 +66,8 @@ def close_serial():
         print("Serial connection closed.")
 
 def read_serial():
+    last_fan_speed = None
+    last_valve_open = None
     while True:
         if ser and ser.is_open:
             try:
@@ -84,6 +86,23 @@ def read_serial():
                         with app.app_context():
                             db.session.add(data)
                             db.session.commit()
+                            # Re-evaluate triggers and apply commands if state changed
+                            current_triggers = calculate_and_log_triggers()
+                            fan_speed = 0
+                            valve_open = False
+                            for t in current_triggers:
+                                if t['name'] == 'Air Temp Cooldown' and t['active']:
+                                    fan_speed = 255
+                                elif t['name'] == 'High Humidity Control' and t['active']:
+                                    fan_speed = max(fan_speed, 128)
+                                elif t['name'] == 'Water Valve Monitor' and t['active']:
+                                    valve_open = True
+                            if fan_speed != last_fan_speed:
+                                send_command(f"F:{fan_speed}")
+                                last_fan_speed = fan_speed
+                            if valve_open != last_valve_open:
+                                send_command("W1" if valve_open else "W0")
+                                last_valve_open = valve_open
             except Exception as e:
                 print(f"Error reading serial: {e}")
         time.sleep(0.1)

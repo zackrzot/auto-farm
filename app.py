@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import math
 from dateutil.relativedelta import relativedelta
 from models import db, SensorData, TriggerLog, WateringSchedule, WateringLog
-from config import get_accurate_time
+from config import get_accurate_time, TARGET_TEMP_F, TARGET_HUMIDITY, TEMP_RANGE, HUMIDITY_RANGE
 import argparse
 import os
 import atexit
@@ -107,12 +107,7 @@ def read_serial():
                             db.session.commit()
                             # Re-evaluate triggers and apply commands if state changed
                             current_triggers = calculate_and_log_triggers()
-                            fan_speed = 0
-                            for t in current_triggers:
-                                if t['name'] == 'Air Temp Cooldown' and t['active']:
-                                    fan_speed = 255
-                                elif t['name'] == 'High Humidity Control' and t['active']:
-                                    fan_speed = max(fan_speed, 128)
+                            fan_speed = calculate_fan_speed()
                             if fan_speed != last_fan_speed:
                                 send_command(f"F:{fan_speed}")
                                 last_fan_speed = fan_speed
@@ -196,12 +191,7 @@ def control_reset():
     """Re-apply device states based on current trigger calculations (same logic as app startup)."""
     try:
         current_triggers = calculate_and_log_triggers()
-        fan_speed = 0
-        for t in current_triggers:
-            if t['name'] == 'Air Temp Cooldown' and t['active']:
-                fan_speed = 255
-            elif t['name'] == 'High Humidity Control' and t['active']:
-                fan_speed = max(fan_speed, 128)
+        fan_speed = calculate_fan_speed()
         send_command(f"F:{fan_speed}")
         send_command("W0")
         return jsonify({
@@ -631,6 +621,19 @@ def get_watering_log():
     } for l in logs])
 
 
+def calculate_fan_speed():
+    """Calculate fan PWM value (0-255) based on latest sensor data using proportional scaling."""
+    latest = SensorData.query.order_by(SensorData.timestamp.desc()).first()
+    if not latest:
+        return 0
+    # Scale 0→255 as temp rises from TARGET_TEMP_F to TARGET_TEMP_F + TEMP_RANGE
+    temp_ratio = max(0.0, min(1.0, (latest.temp_f - TARGET_TEMP_F) / TEMP_RANGE))
+    # Scale 0→255 as humidity rises from TARGET_HUMIDITY to TARGET_HUMIDITY + HUMIDITY_RANGE
+    humidity_ratio = max(0.0, min(1.0, (latest.humidity - TARGET_HUMIDITY) / HUMIDITY_RANGE))
+    ratio = max(temp_ratio, humidity_ratio)
+    return int(round(ratio * 255))
+
+
 def calculate_and_log_triggers():
     """Calculate triggers from latest sensor data and log them to database"""
     latest = SensorData.query.order_by(SensorData.timestamp.desc()).first()
@@ -707,15 +710,7 @@ if __name__ == '__main__':
         # Send correct device states based on active triggers
         with app.app_context():
             current_triggers = calculate_and_log_triggers()
-            # Determine fan commands from triggers
-            fan_speed = 0
-            for t in current_triggers:
-                if t['name'] == 'Air Temp Cooldown' and t['active']:
-                    # Fan scales to 100% from 80-85°F
-                    fan_speed = 255
-                elif t['name'] == 'High Humidity Control' and t['active']:
-                    # Fan runs at 50% minimum
-                    fan_speed = max(fan_speed, 128)
+            fan_speed = calculate_fan_speed()
             send_command(f"F:{fan_speed}")
             send_command("W0")  # Valve defaults closed; control separately
     app.run(debug=True, host='0.0.0.0')

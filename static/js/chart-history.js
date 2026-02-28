@@ -226,7 +226,63 @@ async function loadDayData(year, month, day) {
         // Handle both old and new API response formats
         const sensorData = data.sensor_data || data;
         const triggerLogs = data.trigger_logs || {};
-        
+
+        // Store full day data for filtering
+        window.fullDaySensorData = sensorData;
+        window.fullDayTriggerLogs = triggerLogs;
+
+        window.filterChartByHour = function() {
+            if (!window.fullDaySensorData.length) return;
+            const startHour = parseInt(hourRangeStart.value);
+            const endHour = parseInt(hourRangeEnd.value);
+            const filtered = window.fullDaySensorData.filter(d => {
+                const date = new Date(d.timestamp);
+                const hour = date.getHours();
+                return hour >= startHour && hour < endHour;
+            });
+            // Update chart labels and datasets
+            if (chart) {
+                chart.data.labels = filtered.map(d => {
+                    const time = new Date(d.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                    return time;
+                });
+                chart.data.datasets[0].data = filtered.map(d => d.temp_f);
+                chart.data.datasets[1].data = filtered.map(d => d.humidity);
+                chart.data.datasets[2].data = filtered.map(d => d.hydrometer_a);
+                chart.data.datasets[3].data = filtered.map(d => d.hydrometer_b);
+                // Triggers
+                const triggerNames = new Set();
+                Object.values(window.fullDayTriggerLogs).forEach(tsTriggers => {
+                    Object.keys(tsTriggers).forEach(name => triggerNames.add(name));
+                });
+                while (chart.data.datasets.length > 4) chart.data.datasets.pop();
+                Array.from(triggerNames).forEach((triggerName, idx) => {
+                    const triggerData = filtered.map(d => {
+                        const logEntry = window.fullDayTriggerLogs[d.timestamp];
+                        if (logEntry && triggerName in logEntry) {
+                            return logEntry[triggerName] ? 100 : 0;
+                        }
+                        return null;
+                    });
+                    if (triggerData.some(v => v !== null)) {
+                        chart.data.datasets.push({
+                            label: `Trigger: ${triggerName}`,
+                            data: triggerData,
+                            borderColor: '#888',
+                            backgroundColor: '#8882',
+                            borderWidth: 1,
+                            fill: true,
+                            stepped: true,
+                            tension: 0,
+                            pointRadius: 0,
+                            yAxisID: 'y1'
+                        });
+                    }
+                });
+                chart.update();
+            }
+        }
+
         if (!Array.isArray(sensorData) || sensorData.length === 0) {
             document.getElementById('noDataMessage').style.display = 'block';
             if (chart) {
@@ -236,97 +292,18 @@ async function loadDayData(year, month, day) {
             }
             return;
         }
-        
-        document.getElementById('noDataMessage').style.display = 'block';
-        
-        // Get unique trigger names from the logs
-        const triggerNames = new Set();
-        Object.values(triggerLogs).forEach(timestampTriggers => {
-            Object.keys(timestampTriggers).forEach(name => triggerNames.add(name));
-        });
-        
-        // Update chart with selected day's data
-        if (chart) {
-            // Format labels as HH:MM for minute-aggregated data
-            chart.data.labels = sensorData.map(d => {
-                const time = new Date(d.timestamp).toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit'
-                });
-                return time;
-            });
-            
-            // Update sensor datasets
-            chart.data.datasets[0].data = sensorData.map(d => d.temp_f);
-            chart.data.datasets[1].data = sensorData.map(d => d.humidity);
-            chart.data.datasets[2].data = sensorData.map(d => d.hydrometer_a);
-            chart.data.datasets[3].data = sensorData.map(d => d.hydrometer_b);
-            
-            // Update or add trigger datasets
-            const colors = ['#dc3545', '#28a745', '#ffc107', '#0d6efd', '#6f42c1', '#20c997'];
-            let triggerIndex = 0;
-            const triggerColors = {};
-            
-            triggerNames.forEach(triggerName => {
-                triggerColors[triggerName] = colors[triggerIndex % colors.length];
-                triggerIndex++;
-            });
-            
-            // Remove old trigger datasets (keep only the 4 sensor datasets)
-            while (chart.data.datasets.length > 4) {
-                chart.data.datasets.pop();
-            }
-            
-            // Add trigger datasets
-            Array.from(triggerNames).forEach((triggerName, idx) => {
-                const triggerColor = triggerColors[triggerName];
-                const triggerData = sensorData.map(d => {
-                    const logEntry = triggerLogs[d.timestamp];
-                    if (logEntry && triggerName in logEntry) {
-                        return logEntry[triggerName] ? 100 : 0;
-                    }
-                    return null;
-                });
-                
-                // Only add dataset if there's data
-                if (triggerData.some(v => v !== null)) {
-                    chart.data.datasets.push({
-                        label: `Trigger: ${triggerName}`,
-                        data: triggerData,
-                        borderColor: triggerColor,
-                        backgroundColor: triggerColor + '20',
-                        borderWidth: 1,
-                        fill: true,
-                        stepped: true,
-                        tension: 0,
-                        pointRadius: 0,
-                        yAxisID: 'y1'
-                    });
-                }
-            });
-            
-            // Update chart scales if trigger data exists
-            if (triggerNames.size > 0) {
-                chart.options.scales.y1 = {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    min: 0,
-                    max: 100,
-                    ticks: {
-                        callback: function(value) {
-                            return value === 100 ? 'Active' : 'Inactive';
-                        }
-                    },
-                    grid: {
-                        drawOnChartArea: false
-                    }
-                };
-            }
-            
-            chart.update();
-            document.getElementById('noDataMessage').style.display = 'none';
-        }
+
+        document.getElementById('noDataMessage').style.display = 'none';
+
+        // Reset sliders to full day
+        const hourRangeStart = document.getElementById('hourRangeStart');
+        const hourRangeEnd = document.getElementById('hourRangeEnd');
+        hourRangeStart.value = 0;
+        hourRangeEnd.value = 24;
+        if (typeof updateHourLabels === 'function') updateHourLabels();
+
+        // Filter and update chart
+        if (typeof filterChartByHour === 'function') filterChartByHour();
     } catch (error) {
         console.error('Error loading day data:', error);
         document.getElementById('noDataMessage').style.display = 'block';
@@ -348,4 +325,35 @@ document.addEventListener('DOMContentLoaded', function() {
         currentDate.setMonth(currentDate.getMonth() + 1);
         renderCalendar();
     });
+
+    // Time window slider logic
+    const hourRangeStart = document.getElementById('hourRangeStart');
+    const hourRangeEnd = document.getElementById('hourRangeEnd');
+    const hourRangeStartLabel = document.getElementById('hourRangeStartLabel');
+    const hourRangeEndLabel = document.getElementById('hourRangeEndLabel');
+
+    function pad2(n) { return n.toString().padStart(2, '0'); }
+
+    function updateHourLabels() {
+        hourRangeStartLabel.textContent = pad2(hourRangeStart.value) + ':00';
+        hourRangeEndLabel.textContent = pad2(hourRangeEnd.value) + ':00';
+    }
+
+    function enforceSliderBounds(event) {
+        if (parseInt(hourRangeStart.value) >= parseInt(hourRangeEnd.value)) {
+            if (event.target === hourRangeStart) {
+                hourRangeEnd.value = Math.min(24, parseInt(hourRangeStart.value) + 1);
+            } else {
+                hourRangeStart.value = Math.max(0, parseInt(hourRangeEnd.value) - 1);
+            }
+        }
+        updateHourLabels();
+        filterChartByHour();
+    }
+
+    hourRangeStart.addEventListener('input', enforceSliderBounds);
+    hourRangeEnd.addEventListener('input', enforceSliderBounds);
+
+    // Initialize labels
+    updateHourLabels();
 });

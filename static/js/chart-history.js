@@ -45,6 +45,14 @@ function initChart() {
                     backgroundColor: 'rgba(255, 193, 7, 0.05)',
                     tension: 0.1,
                     fill: false
+                },
+                {
+                    label: 'Fan Speed (0–255)',
+                    data: [],
+                    borderColor: '#6f42c1',
+                    backgroundColor: 'rgba(111, 66, 193, 0.05)',
+                    tension: 0.1,
+                    fill: false
                 }
             ]
         },
@@ -250,12 +258,13 @@ async function loadDayData(year, month, day) {
                 chart.data.datasets[1].data = filtered.map(d => d.humidity);
                 chart.data.datasets[2].data = filtered.map(d => d.hydrometer_a);
                 chart.data.datasets[3].data = filtered.map(d => d.hydrometer_b);
+                chart.data.datasets[4].data = filtered.map(d => d.fan_signal);
                 // Triggers
                 const triggerNames = new Set();
                 Object.values(window.fullDayTriggerLogs).forEach(tsTriggers => {
                     Object.keys(tsTriggers).forEach(name => triggerNames.add(name));
                 });
-                while (chart.data.datasets.length > 4) chart.data.datasets.pop();
+                while (chart.data.datasets.length > 5) chart.data.datasets.pop();
                 Array.from(triggerNames).forEach((triggerName, idx) => {
                     const triggerData = filtered.map(d => {
                         const logEntry = window.fullDayTriggerLogs[d.timestamp];
